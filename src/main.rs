@@ -538,13 +538,7 @@ fn parse_mode(source: &String, tokens: &Vec<Token>, mut current: &mut usize) -> 
     }
     let t = current_token(&tokens, &mut current);
     let mode_name = get_token_str(source, t).to_string();
-    let mode = match mode_from_name(&mode_name) {
-        Ok(mode_) => mode_,
-        Err(err_) => return Err(err_),
-    };
-
-    *current = *current + 1; // Add one for the identifier mode
-    return Ok(mode);
+    return mode_from_name(&mode_name);
 }
 
 fn parse_literal(source: &String, t: &Token, current: &mut usize) -> Result<Expr, String> {
@@ -2754,6 +2748,7 @@ fn main_run(path: &String, source: &String) -> String {
             return format!("{}:{}", &path, error_string);
         },
     };
+    current = current + 1; // Add one for the identifier mode
     println!("Mode: {}", mode.name);
 
     if mode.name == "pure" {
