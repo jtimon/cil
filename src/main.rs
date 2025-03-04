@@ -1335,6 +1335,7 @@ fn start_context(mode: ModeDef) -> Context {
     context.funcs.insert("print".to_string(), func_def_print.clone());
     context.funcs.insert("println".to_string(), func_def_print.clone());
     context.funcs.insert("runfile".to_string(), func_def_print.clone());
+    context.funcs.insert("import".to_string(), func_def_print.clone());
 
     let mut args_single_i64 : Vec<Declaration> = Vec::new();
     args_single_i64.push(Declaration{name: "a".to_string(), value_type: ValueType::TI64, is_mut: false});
@@ -2161,6 +2162,12 @@ fn eval_core_proc_runfile(mut context: &mut Context, source: &String, tokens: &V
     return "".to_string();
 }
 
+fn eval_core_proc_import(mut context: &mut Context, source: &String, tokens: &Vec<Token>, e: &Expr) -> String {
+    assert!(e.params.len() == 1, "eval_core_proc_import expects a single parameter.");
+    let path = &eval_expr(&mut context, &source, &tokens, e.params.get(0).unwrap());
+    return root_import_run(&mut context, &path, &source);
+}
+
 fn eval_core_exit(tokens: &Vec<Token>, e: &Expr) -> String {
     assert!(e.params.len() == 1, "eval_core_exit expects a single parameter.");
     let e_exit_code = e.params.get(0).unwrap();
@@ -2273,7 +2280,7 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, source: &String, t
             "print" => eval_core_proc_print(false, &mut context, &source, &tokens, &e),
             "println" => eval_core_proc_print(true, &mut context, &source, &tokens, &e),
             "runfile" => eval_core_proc_runfile(&mut context, &source, &tokens, &e),
-            // "import" => eval_core_proc_import(false, &mut context, &source, &tokens, &e),
+            "import" => eval_core_proc_import(&mut context, &source, &tokens, &e),
             "exit" => eval_core_exit(&tokens, &e),
             _ => panic!("{}:{} {} eval error: Core procedure '{}' not implemented.", t.line, t.col, LANG_NAME, name),
         }
@@ -2727,6 +2734,110 @@ fn to_ast_str(e: &Expr) -> String {
             panic!("{} AST error: Node_type::Return shouldn't be analized in to_ast_str().", LANG_NAME);
         },
     }
+}
+
+// ---------- root_import_run
+
+// TODO inline this function in eval_core_proc_import(), once it is small enough
+fn root_import_run(mut context: &mut Context, path: &String, source: &String) -> String {
+    let tokens: Vec<Token> = scan_tokens(&source);
+    if tokens.len() < 1 {
+        return format!("{}:{}:{} compiler error: End of file not found.", path, 1, 0);
+    } else if is_eof(&tokens, 0) {
+        return format!("{}:{}:{} compiler error: Nothing to be done", path, tokens.get(0).unwrap().line, 0);
+    }
+
+    let mut errors_found : usize = 0;
+    for t in &tokens {
+        print_if_lex_error(&path, &source, &t, &mut errors_found)
+    }
+    if errors_found > 0 {
+        return format!("Compiler errors: {} lexical errors found", errors_found);
+    }
+
+    let mut current: usize = 0;
+    let mode = match parse_mode(&source, &tokens, &mut current) {
+        Ok(mode_) => mode_,
+        Err(error_string) => {
+            return format!("{}:{}", &path, error_string);
+        },
+    };
+    current = current + 1; // Add one for the identifier mode
+    println!("Mode: {}", mode.name);
+
+    if mode.name == "pure" {
+        return format!("{}:0:0: mode '{}' is not properly supported in {} yet. Try mode {} instead", path, mode.name, BIN_NAME, "lib");
+    }
+    if mode.name == "external" {
+        return format!("{}:0:0: mode '{}' is not properly supported in {} yet. Try mode {} instead", path, mode.name, BIN_NAME, "lib");
+    }
+    if mode.name != "lib" {
+        return format!("{}:0:0: Cannot import mode '{}'. Suggestion: Try 'mode {}' instead. \nExplanation: 'import' core proc can only import modes that are 'import safe'. Only '{}' for now.",
+                       path, mode.name, "lib", "lib");
+    }
+
+    let mut e: Expr = match parse_tokens(&source, &tokens, &mut current) {
+        Ok(expr) => expr,
+        Err(error_string) => {
+            return format!("{}:{}", &path, error_string);
+        },
+    };
+    if !SKIP_AST {
+        println!("AST: \n{}", to_ast_str(&e));
+    }
+
+    let mut errors = init_context(&mut context, &source, &tokens, &e);
+    if errors.len() > 0 {
+        for err in &errors {
+            println!("{}:{}", path, err);
+        }
+        return format!("Compiler errors: {} declaration errors found", errors.len());
+    }
+
+    match &e.node_type {
+        NodeType::Body => {
+            for p in e.params.iter() {
+                match &p.node_type {
+
+                    NodeType::Declaration(decl) => {
+                        if !context.mode.allows_base_mut && decl.is_mut {
+                            let t = tokens.get(p.token_index).unwrap();
+                            errors.push(format!("{}:{}: {} error: mode {} doesn't allow mut declaration of 'mut {}'.\nSuggestion: remove 'mut' or change to mode script or cli",
+                                t.line, t.col, "mode", context.mode.name, decl.name));
+                        }
+                    },
+                    NodeType::FCall(name) => {
+                        if !context.mode.allows_base_calls {
+                            let t = tokens.get(p.token_index).unwrap();
+                            errors.push(format!("{}:{}: {} error: mode {} doesn't allow calls in the root context of the file'.\nSuggestion: remove the call to '{}' or change mode 'test' or 'script'",
+                                t.line, t.col, "mode", context.mode.name, name));
+                        }
+                    }
+                    _ => {},
+                }
+            }
+        },
+        _ => {},
+    }
+    if errors.len() > 0 {
+        for err in &errors {
+            println!("{}:{}", path, err);
+        }
+        return format!("Mode errors: {} type errors found", errors.len());
+    }
+    if context.mode.needs_main_proc {
+        e.params.push(Expr{node_type: NodeType::FCall("main".to_string()), token_index: 0, params: Vec::new()});
+    }
+
+    let errors = check_types(&mut context, &source, &tokens, &e);
+    if errors.len() > 0 {
+        for err in &errors {
+            println!("{}:{}", path, err);
+        }
+        return format!("Compiler errors: {} type errors found", errors.len());
+    }
+
+    eval_expr(&mut context, &source, &tokens, &e)
 }
 
 // ---------- main binary
