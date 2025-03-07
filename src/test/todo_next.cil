@@ -21,9 +21,9 @@ println("field 'field_static_str' in struct 'MyNamespace' is being accessed: ", 
 // println("field 'field_static_int' in struct 'MyNamespace' is being accessed: ", btoi(MyNamespace.field_static_int))
 // println("field 'field_static_bool' in struct 'MyNamespace' is being accessed: ", btoa(MyNamespace.field_static_bool))
 // MyNamespace.proc_static() // TODO method calls as statements
-// temp_str := MyNamespace.func_static_str() // TODO method calls as primary expr in declaration
-// println(temp_str)
-// println(MyNamespace.func_static_str()) // TODO method calls as primary expr as argument
+temp_str := MyNamespace.func_static_str()
+println(temp_str)
+println(MyNamespace.func_static_str())
 
 // TODO next:
 
