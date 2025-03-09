@@ -923,7 +923,8 @@ fn parse_primary_identifier(source: &String, tokens: &Vec<Token>, current: &mut 
     }
 
     let mut current_identifier = get_token_str(source, t).to_string();
-    let mut e = Expr { node_type: NodeType::Identifier(current_identifier.clone()), token_index: initial_current, params: params};
+    let mut e_array = Vec::new();
+    e_array.push(Expr { node_type: NodeType::Identifier(current_identifier.clone()), token_index: initial_current, params: Vec::new()});
     while TokenType::Dot == next_t.token_type {
         let next2_t = tokens.get(*current + 2).unwrap();
         if TokenType::Identifier != next2_t.token_type {
@@ -933,10 +934,28 @@ fn parse_primary_identifier(source: &String, tokens: &Vec<Token>, current: &mut 
 
         current_identifier = get_token_str(source, next2_t).to_string();
         *current = *current + 2;
-        e.params.push(Expr { node_type: NodeType::Identifier(current_identifier.clone()), token_index: *current, params: Vec::new()});
+        e_array.push(Expr { node_type: NodeType::Identifier(current_identifier.clone()), token_index: *current, params: Vec::new()});
         next_t = tokens.get(*current + 1).unwrap();
     }
     *current = *current + 1;
+
+    let mut e : Expr = e_array.get(0).unwrap().clone();
+    let mut first = true;
+    for i in e_array.len()-1..0 {
+        let i_e = e_array.get(i).unwrap();
+        if first {
+            first = false;
+            e = i_e.clone();
+            continue;
+        }
+        let mut inner_params : Vec<Expr> = Vec::new();
+        inner_params.push(e);
+        let inner_id_name = match &i_e.node_type {
+            NodeType::Identifier(inner_id_name_) => inner_id_name_,
+            _ => panic!("parse_primary_identifier(): this should never happen."),
+        };
+        e = Expr { node_type: NodeType::Identifier(inner_id_name.to_string()), token_index: *current, params: inner_params};
+    }
     return Ok(e);
 }
 
