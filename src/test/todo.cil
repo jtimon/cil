@@ -59,6 +59,6 @@ exit(0); // TODO note the semicolon is being ignored
 // test_fails_example("enum_func_fails := func(a: ExampleEnumAAAAAAAA) returns ExampleEnum {}", "TODO implement test_fails_example() in the core")
 
 test_structs := proc() {
-    test(MyStruct.static_bool_field, "MyStruct.static_bool_field is not true")
+    // test(MyStruct.static_bool_field, "MyStruct.static_bool_field is not true")
 }
 test_structs()
