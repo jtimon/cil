@@ -56,4 +56,7 @@ ExampleEnum2 := enum {
 test_structs := proc() {
     test(MyStruct.static_bool_field, "MyStruct.static_bool_field is not true")
 }
-test_structs()
+
+exit(0); // the following can't be executed, but will be parsed:
+
+test_structs() // TODO
