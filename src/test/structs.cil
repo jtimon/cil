@@ -30,4 +30,7 @@ MyStruct := struct {
 test_structs := proc() {
     test(MyStruct.static_bool_field, "MyStruct.static_bool_field is not true")
 }
+
+exit(0); // the following can't be executed, but will be parsed:
+
 test_structs()
