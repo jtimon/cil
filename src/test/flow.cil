@@ -19,6 +19,10 @@ if gteq(2, 4) {
     println("else: bbbbbbbb")
 }
 
+// loops
+
+// runfile("src/test/loops.cil") TODO fix
+
 // switch statements:
 
 test_int_switch := proc (to_switch: i64) {
