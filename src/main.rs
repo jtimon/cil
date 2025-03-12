@@ -75,8 +75,9 @@ enum TokenType {
     Try, Catch,
 
     // Special in this language:
-    Func, Proc, Macro,
     Mode,
+    Func, Proc, Macro,
+    FuncExt, ProcExt, MacroExt,
 
     // Errors
     Const, Var,
@@ -124,6 +125,9 @@ fn get_identifier_type(identifier: &str) -> TokenType {
         "func" => TokenType::Func,
         "proc" => TokenType::Proc,
         "macro" => TokenType::Macro,
+        "func_ext" => TokenType::FuncExt,
+        "proc_ext" => TokenType::ProcExt,
+        "macro_ext" => TokenType::MacroExt,
         "return" => TokenType::Return,
         "returns" => TokenType::Returns,
         // TODO reserved words:
@@ -430,6 +434,9 @@ enum FunctionType {
     FTFunc,
     FTProc,
     FTMacro,
+    FTFuncExt,
+    FTProcExt,
+    FTMacroExt,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -987,6 +994,9 @@ fn primary(source: &String, tokens: &Vec<Token>, current: &mut usize) -> Result<
     } else {
         match &t.token_type {
             TokenType::Func => return parse_func_proc_definition(FunctionType::FTFunc, &source, &tokens, current),
+            TokenType::FuncExt => return parse_func_proc_definition(FunctionType::FTFuncExt, &source, &tokens, current),
+            TokenType::ProcExt => return parse_func_proc_definition(FunctionType::FTProcExt, &source, &tokens, current),
+            TokenType::MacroExt => return parse_func_proc_definition(FunctionType::FTMacroExt, &source, &tokens, current),
             TokenType::Proc => return parse_func_proc_definition(FunctionType::FTProc, &source, &tokens, current),
             TokenType::Macro => return parse_func_proc_definition(FunctionType::FTMacro, &source, &tokens, current),
             TokenType::Enum => return enum_definition(&source, &tokens, current),
@@ -1555,9 +1565,9 @@ fn get_value_type(context: &Context, tokens: &Vec<Token>, e: &Expr) -> Result<Va
         NodeType::LString(_) => Ok(ValueType::TString),
         NodeType::LList => Ok(ValueType::TList),
         NodeType::FuncDef(func_def) => match func_def.function_type {
-            FunctionType::FTFunc => Ok(ValueType::TFunc),
-            FunctionType::FTProc => Ok(ValueType::TProc),
-            FunctionType::FTMacro => Ok(ValueType::TMacro),
+            FunctionType::FTFunc | FunctionType::FTFuncExt => Ok(ValueType::TFunc),
+            FunctionType::FTProc | FunctionType::FTProcExt => Ok(ValueType::TProc),
+            FunctionType::FTMacro | FunctionType::FTMacroExt => Ok(ValueType::TMacro),
         },
         NodeType::EnumDef(_) => Ok(ValueType::TEnumDef),
         NodeType::StructDef(_) => Ok(ValueType::TStructDef),
@@ -3018,6 +3028,9 @@ fn to_ast_str(e: &Expr) -> String {
                 FunctionType::FTFunc => return "(func)".to_string(),
                 FunctionType::FTProc => return "(proc)".to_string(),
                 FunctionType::FTMacro => return "(macro)".to_string(),
+                FunctionType::FTFuncExt => return "(func ext)".to_string(),
+                FunctionType::FTProcExt => return "(proc ext)".to_string(),
+                FunctionType::FTMacroExt => return "(macro ext)".to_string(),
             }
         },
         NodeType::EnumDef(_) => {
