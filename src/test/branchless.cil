@@ -1,7 +1,5 @@
 mode test
 
-import("src/core.cil")
-
 // branchless conditions:
 
 // btoi is required for branchless arithmetics, branchless is important for some compiled use cases like cryptography

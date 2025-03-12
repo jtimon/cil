@@ -1,7 +1,5 @@
 mode test
 
-import("src/core.cil")
-
 test(eq(Bool.to_int(true), atoi(eval_to_str("true")), "eval_to_str() can't turn literal bools strings into 'true'")
 test(eq(Bool.to_int(false), atoi(eval_to_str("false")), "eval_to_str() can't turn literal bools strings into 'false'")
 test(eq(42, atoi(eval_to_str("42")), "eval_to_str() can't turn literal numbers strings into ints")
