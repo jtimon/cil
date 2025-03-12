@@ -1,7 +1,5 @@
 mode script
 
-import("src/core.cil")
-
 // TODO next:
 
 MyStruct := struct {
