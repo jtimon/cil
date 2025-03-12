@@ -36,17 +36,32 @@ todo := proc(msg: String) {
 }
 
 Bool := struct {
+     mut _bool : bool = false
+
+     init := func(b: bool) returns Bool {
+          self := Bool()
+          self._bool = 0
+          return self
+     }
 
      to_str := func(b: bool) returns String {
           return btoa(b)
      }
 
      to_int := func(b: bool) returns i64 {
-          return btoi(b)
+          return btoi(b) // needed for branchless use cases
      }
 }
 
 I64 := struct {
+     mut _i64 : i64 = 0
+
+     init := func(a: i64) returns Bool {
+          self := I64()
+	  self._i64 = a
+          return self
+     }
+
      to_str := func(i: i64) returns String {
           return itoa(i)
      }
