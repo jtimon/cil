@@ -40,6 +40,10 @@ Bool := struct {
      to_str := func(b: bool) returns String {
           return btoa(b)
      }
+
+     to_int := func(b: bool) returns i64 {
+          return btoi(b)
+     }
 }
 
 // TODO fix aliases
