@@ -35,6 +35,13 @@ todo := proc(msg: String) {
     assertm(false, msg)
 }
 
+Bool := struct {
+
+     to_str := func(b: bool) returns String {
+          return btoa(b)
+     }
+}
+
 // TODO fix aliases
 // my_int : U64 = 1
 
