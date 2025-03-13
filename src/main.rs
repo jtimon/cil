@@ -3152,6 +3152,7 @@ fn run_file(path: &String) {
 }
 
 fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &String) {
+    // TODO rename bool is_import to print_extra for consistency?
     let previous_mode = context.mode.clone();
     if !is_import {
         println!("Running file '{}'", &path);
@@ -3167,7 +3168,7 @@ fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &Stri
             },
         },
     };
-    let run_result = main_run(true, &mut context, &path, &source);
+    let run_result = main_run(is_import, &mut context, &path, &source);
     // REM: this print shit is still here only because repl is still broken
     println!("eval: {}", run_result);
 
