@@ -47,6 +47,12 @@ Bool := struct {
     }
 }
 
+Int := struct {
+    to_str := func(data: i64) returns String {
+        return itoa(data)
+    }
+}
+
 // TODO fix aliases
 // my_int : U64 = 1
 
