@@ -2493,6 +2493,7 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, source: &String, t
             "eval_to_str" => eval_core_proc_eval_to_str(&mut context, &source, &tokens, &e),
             "exit" => eval_core_exit(&tokens, &e),
             "import" => "".to_string(), // Should already be imported in init_context
+            // "import" => eval_core_proc_import(context, &source, &tokens, &e),
             "input_read_line" => eval_core_proc_input_read_line(&mut context, &source, &tokens, &e),
             "print" => eval_core_proc_print(false, &mut context, &source, &tokens, &e),
             "println" => eval_core_proc_print(true, &mut context, &source, &tokens, &e),
