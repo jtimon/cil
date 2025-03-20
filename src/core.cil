@@ -1,5 +1,14 @@
 mode lib
 
+// exit := ext_proc(code: i64)
+// import := ext_proc(path: String)
+//  := ext_func(a: Int, b: Int) returns Int
+// and := ext_func(a: bool) returns bool // TODO vaiadic args
+// or  := ext_func(a: bool) returns bool // TODO vaiadic args
+// add := ext_func(a: Int, b: Int) returns Int
+// sub := ext_func(a: Int, b: Int) returns Int
+// mul := ext_func(a: Int, b: Int) returns Int
+
 // fails because mut func/procs shouldn't be allowed at this context level, in this mode, or perhaps never
 // mut assertm := proc(cond: bool, msg: String) {
 assertm := proc(cond: bool, msg: String) {
