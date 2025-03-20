@@ -39,6 +39,14 @@ branchless := func(cond: bool, a: i64, b: i64) returns i64 {
     return add(mul(a, btoi(cond)), mul(b, btoi(not(cond))))
 }
 
+Bool := struct {
+
+    // TODO Use in branchless
+    to_int := func(b: bool) returns i64 {
+        return btoi(b)
+    }
+}
+
 // TODO fix aliases
 // my_int : U64 = 1
 
