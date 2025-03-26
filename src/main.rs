@@ -1145,7 +1145,9 @@ fn while_statement(tokens: &Vec<Token>, current: &mut usize) -> Result<Expr, Str
 }
 
 fn parse_switch_statement(lexer: &Lexer) -> Result<Expr, String> {
-    let t = tokens.get(*current).unwrap();
+    // WIP
+//    let t = lexer.current()?;
+    let t = lexer.tokens.get(*current).unwrap();
     let initial_current = *current;
     *current = *current + 1;
     let mut params : Vec<Expr> = Vec::new();
