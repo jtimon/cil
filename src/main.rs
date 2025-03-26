@@ -97,22 +97,32 @@ struct Token {
 }
 
 struct Lexer {
+    current: usize,
     tokens: Vec<Token>,
 }
 
 impl Lexer {
     fn new(source: String) -> Self {
-        return Self{tokens: scan_tokens(source)};
+        return Self{current: 0, tokens: scan_tokens(source)};
     }
 
     fn len(self: &Lexer) -> usize {
         return self.tokens.len();
     }
 
+    fn inc(self: &mut Lexer) {
+        assert!(self.current <= self.tokens.len(), "Trying to incrment a lexer after the tokens are all gone");
+        self.current += 1;
+    }
+
+    fn get_current(self: &Lexer) -> Result<&Token, String> {
+        return self.get(&self.current);
+    }
+
     fn get(self: &Lexer, i: &usize) -> Result<&Token, String> {
         match self.tokens.get(*i) {
-            Some(_t) => {
-                return Ok(_t);
+            Some(t_) => {
+                return Ok(t_);
             },
             None => {
                 return Err(format!("Token in pos {} is out of bounds", i));
@@ -576,16 +586,16 @@ fn mode_from_name(mode_name: &str) -> Result<ModeDef, String> {
     };
 }
 
-fn parse_mode(path: &String, lexer: &Lexer, mut current: &mut usize) -> Result<ModeDef, String> {
-    if &TokenType::Mode != current_token_type(&lexer.tokens, &mut current) {
+fn parse_mode(path: &String, lexer: &mut Lexer) -> Result<ModeDef, String> {
+    if &TokenType::Mode != &lexer.get_current()?.token_type {
         return Err(format!("0:0: 'mode' is required in the beginning of the file"));
     }
-    *current = *current + 1; // Add one for mode
+    lexer.inc(); // Add one for mode
 
-    if &TokenType::Identifier != current_token_type(&lexer.tokens, &mut current) {
+    if &TokenType::Identifier != &lexer.get_current()?.token_type {
         return Err(format!("0:0: Expected identifier after 'mode'"));
     }
-    let t = lexer.get(current)?;
+    let t = lexer.get_current()?;
     let mode_name = &t.token_str;
     let mode = match mode_from_name(&mode_name) {
         Ok(mode_) => mode_,
@@ -602,7 +612,7 @@ fn parse_mode(path: &String, lexer: &Lexer, mut current: &mut usize) -> Result<M
         return Err(format!("{}:0:0: mode '{}' is not properly supported in '{}' yet. Try mode '{}' instead", path, mode.name, BIN_NAME, "script"));
     }
 
-    *current = *current + 1; // Add one for the identifier mode
+    lexer.inc(); // Add one for the identifier mode
     return Ok(mode);
 }
 
@@ -1134,12 +1144,7 @@ fn while_statement(tokens: &Vec<Token>, current: &mut usize) -> Result<Expr, Str
     Ok(Expr { node_type: NodeType::While, token: tokens.get(initial_current).unwrap().clone(), params: params})
 }
 
-fn current_token_type<'a>(tokens: &'a Vec<Token>, current: &'a mut usize) -> &'a TokenType {
-    let next_t = &tokens.get(*current).unwrap();
-    return &next_t.token_type;
-}
-
-fn parse_switch_statement(tokens: &Vec<Token>, current: &mut usize) -> Result<Expr, String> {
+fn parse_switch_statement(lexer: &Lexer) -> Result<Expr, String> {
     let t = tokens.get(*current).unwrap();
     let initial_current = *current;
     *current = *current + 1;
@@ -1150,7 +1155,7 @@ fn parse_switch_statement(tokens: &Vec<Token>, current: &mut usize) -> Result<Ex
     };
     params.push(prim);
 
-    if &TokenType::LeftBrace != current_token_type(&tokens, current) {
+    if &TokenType::LeftBrace != &lexer.get_current()?.token_type {
         return Err(format!("{}:{}: parse error: Expected '{{' after primary expression in 'switch' statement.", t.line, t.col));
     }
     *current = *current + 1;
@@ -3043,15 +3048,14 @@ fn to_ast_str(e: &Expr) -> String {
 
 fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source: String) -> String {
 
-    let lexer = match lexer_from_source(&path, source) {
-        Ok(_result) => _result,
+    let mut lexer = match lexer_from_source(&path, source) {
+        Ok(result_) => result_,
         Err(error_string) => {
             return format!("{}:{}", &path, error_string);
         },
     };
 
-    let mut current: usize = 0;
-    let mode = match parse_mode(&path, &lexer, &mut current) {
+    let mode = match parse_mode(&path, &mut lexer) {
         Ok(mode_) => mode_,
         Err(error_string) => {
             return format!("{}:{}", &path, error_string);
@@ -3062,7 +3066,7 @@ fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source:
         println!("Mode: {}", context.mode.name);
     }
 
-    let e: Expr = match parse_tokens(lexer, &mut current) {
+    let e: Expr = match parse_tokens(lexer) {
         Ok(expr) => expr,
         Err(error_string) => {
             return format!("{}:{}", &path, error_string);
