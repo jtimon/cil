@@ -101,7 +101,7 @@ struct Lexer {
 }
 
 impl Lexer {
-    fn new(source: String) -> Self {
+    fn new(source: &String) -> Self {
         return Self{tokens: scan_tokens(source)};
     }
 
@@ -210,11 +210,20 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
     }
 }
 
-fn scan_push_token(tokens: &mut Vec<Token>, token_type: TokenType, token_str: &str, line: usize, col: usize) {
-    tokens.push(Token{token_type: token_type, token_str: token_str.to_string(), line: line, col: col});
+fn instantiate_push_token(tokens: &mut Vec<Token>, token_type: &TokenType, token_str: &str, line: usize, col: usize) {
+    tokens.push(Token{token_type: token_type.clone(), token_str: token_str.to_string(), line: line, col: col});
 }
 
-fn scan_tokens(source: String) -> Vec<Token> {
+fn scan_push_token(source: &String, tokens: &mut Vec<Token>, token_type: &TokenType, line: usize, col: usize,
+                   start: usize, pos: usize, start_line_pos: usize) {
+    match token_type {
+        TokenType::Number => instantiate_push_token(tokens, &TokenType::Number, &source[start..pos], line, pos - start_line_pos + 1),
+        TokenType::String => instantiate_push_token(tokens, &TokenType::String, &source[start + 1..pos], line, pos - start_line_pos + 1),
+        _                 => instantiate_push_token(tokens, &TokenType::Identifier, &source[start + 1..pos], line, pos - start_line_pos + 1),
+    }
+}
+
+fn scan_tokens(source: &String) -> Vec<Token> {
     let mut tokens : Vec<Token> = Vec::new();
     let eof_pos: usize = source.len();
     let mut pos = 0;
@@ -224,7 +233,7 @@ fn scan_tokens(source: String) -> Vec<Token> {
     while pos < eof_pos {
         let start = pos;
 
-        if is_digit(&source, pos) {
+        if is_digit(source, pos) {
             while pos < eof_pos && is_digit(&source, pos) {
                 pos += 1;
             }
@@ -235,7 +244,9 @@ fn scan_tokens(source: String) -> Vec<Token> {
                     pos += 1;
                 }
             }
-            scan_push_token(&mut tokens, TokenType::Number, &source[start..pos], line, pos - start_line_pos + 1);
+            scan_push_token(&source, &mut tokens, &TokenType::Number, line, pos - start_line_pos + 1, start_line_pos);
+            continue; // implement
+
         } else {
 
             let token_type = match &source[pos..pos+1] {
@@ -270,9 +281,9 @@ fn scan_tokens(source: String) -> Vec<Token> {
                 // reserved for two chars in a row
                 "." => if &source[pos+1..pos+2] == "." { pos += 1; TokenType::DoubleDot } else { TokenType::Dot },
                 "=" => if &source[pos+1..pos+2] == "=" { pos += 1; TokenType::EqualEqual } else { TokenType::Equal },
-                "<" => if &source[pos+1..pos+2] == "=" { pos += 1; TokenType::LesserEqual } else { TokenType::Lesser },
-                ">" => if &source[pos+1..pos+2] == "=" { pos += 1; TokenType::GreaterEqual } else { TokenType::Greater },
-                "!" => if &source[pos+1..pos+2] == "=" { pos += 1; TokenType::NotEqual } else { TokenType::Not },
+                "<" => if &source[pos+1..pos+2] == "<" { pos += 1; TokenType::LesserEqual } else { TokenType::Lesser },
+                ">" => if &source[pos+1..pos+2] == ">" { pos += 1; TokenType::GreaterEqual } else { TokenType::Greater },
+                "!" => if &source[pos+1..pos+2] == "!" { pos += 1; TokenType::NotEqual } else { TokenType::Not },
 
                 // semicolon is optional between statements, but allowed. DoubleSemicolon means empty statement
                 ";" => if &source[pos+1..pos+2] == ";" { pos += 1; TokenType::DoubleSemicolon } else { TokenType::Semicolon },
@@ -329,9 +340,9 @@ fn scan_tokens(source: String) -> Vec<Token> {
 
             }; // let match
             if token_type == TokenType::String {
-                scan_push_token(&mut tokens, token_type, &source[start + 1..pos], line, pos - start_line_pos + 1);
+                scan_push_token(&mut tokens, &token_type, line, pos - start_line_pos + 1, start_line_pos);
             } else {
-                scan_push_token(&mut tokens, token_type, &source[start..pos + 1], line, pos - start_line_pos + 1);
+                scan_push_token(&mut tokens, &token_type, &source[start..pos + 1], line, pos - start_line_pos + 1, start_line_pos);
             }
             pos += 1;
         } // else
