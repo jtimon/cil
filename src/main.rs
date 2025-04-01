@@ -1367,6 +1367,12 @@ struct EnumVal {
     // extra_Val: Option<Anything>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct SStruct {
+    struct_type: String,
+    values : HashMap<String, Expr>,
+}
+
 #[derive(Clone)]
 struct Context {
     mode: ModeDef,
@@ -1981,10 +1987,10 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
                             },
                         };
 
-                        if e.params.len() == 0 {
-                            errors.push(format!("{}:{}: {} error: struct '{}' cannot be instanciated. Constructors not implemented yet",
-                                                t.line, t.col, LANG_NAME, f_name));
-                            return errors;
+                        if e.params.get(0).unwrap().params.len() == 0 {
+                            // If there's nothing after the dot, is an instantiation, a struct literal
+                            // Nothing else to check for now as arguments are not allowed
+                            return errors
                         }
 
                         let after_dot = e.params.get(0).unwrap().params.get(0).unwrap();
@@ -2677,8 +2683,11 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
             if custom_symbol.value_type == ValueType::TEnumDef {
                 let enum_expr_result_str = &eval_expr(&mut context, inner_e);
                 context.enums.insert(declaration.name.to_string(), EnumVal{enum_type: custom_type_name.to_string(), enum_name: enum_expr_result_str.to_string()});
+            } else if custom_symbol.value_type == ValueType::TStructDef {
+                context.structs.
+
             } else {
-                panic!("{}:{} {} eval error: Cannot declare {} of type {:?}. Only enum custom types allowed yet.",
+                panic!("{}:{} {} eval error: Cannot declare {} of type {:?}. Only enum and struct custom types allowed yet.",
                        t.line, t.col, LANG_NAME, &declaration.name, &declaration.value_type)
             }
             return format!("{} declared", custom_type_name)
