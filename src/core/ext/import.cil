@@ -1,0 +1,3 @@
+mode lib
+
+import  := ext_proc(path: String);

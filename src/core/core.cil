@@ -1,7 +1,5 @@
 mode lib
 
-import  := ext_proc(path: String);
-
 import("src/core/ext/funcs.cil")
 
 not := ext_func(a: bool) returns bool;
