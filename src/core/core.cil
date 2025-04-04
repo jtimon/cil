@@ -1,29 +1,14 @@
 mode lib
 
-not := ext_func(a: bool) returns bool;
-and := ext_func(args: ..bool) returns bool;
-or  := ext_func(args: ..bool) returns bool;
+import("src/core/ext/funcs.cil")
+
 xor := func(a: bool, b: bool) returns bool {
     // return a.and(not(b)).or(b.and(not(a))) // TODO implement UFCS (Uniform Function Call Syntax) for funccall return values
     return or(a.and(not(b)), b.and(not(a)))
 }
 
-eq     := ext_func(a: i64, b: i64) returns bool;
-lt     := ext_func(a: i64, b: i64) returns bool;
-lteq   := ext_func(a: i64, b: i64) returns bool;
-gt     := ext_func(a: i64, b: i64) returns bool;
-gteq   := ext_func(a: i64, b: i64) returns bool;
-str_eq := ext_func(a: String, b: String) returns bool;
-
-add := ext_func(a: i64, b: i64) returns i64;
-sub := ext_func(a: i64, b: i64) returns i64;
-mul := ext_func(a: i64, b: i64) returns i64;
-div := ext_func(a: i64, b: i64) returns i64;
-
-btoi := ext_func(a: bool) returns i64;
 btoa := ext_func(a: bool) returns String;
 itoa := ext_func(a: i64) returns String;
-atoi := ext_func(a: String) returns i64;
 concat := ext_func(a: String, b: String) returns String;
 
 exit    := ext_proc(code: i64);
