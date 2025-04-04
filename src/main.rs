@@ -581,6 +581,27 @@ impl Expr {
             token: token, // TODO remove
         }
     }
+
+    fn new_explicit(node_type: NodeType, params: Vec<Expr>, line: usize, col: usize, token_str: &str) -> Expr {
+        return Expr{
+            node_type: node_type,
+            params: params,
+            line: line,
+            col: col,
+            token_str: token_str.to_string(), // TODO remove
+        }
+    }
+
+    fn new_node(node_type: NodeType, e: &Expr, params: Vec<Expr>) -> Expr {
+        return Expr{
+            node_type: node_type,
+            params: e.params,
+            line: e.line,
+            col: e.col,
+            token_str: e.token_str.clone(), // TODO remove
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2321,11 +2342,13 @@ fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
 
     if extra_arg {
         let id_expr_name = get_func_name_in_call(&e);
-        let extr_arg_e = Expr::new(NodeType::Identifier(id_expr_name), e.token.clone(), Vec::new());
+        let extr_arg_e = Expr::new_node(NodeType::Identifier(id_expr_name), e, Vec::new());
         let mut new_args = Vec::new();
         new_args.push(extr_arg_e);
         new_args.append(&mut e.params.clone());
-        let new_e = Expr::new(NodeType::Identifier(f_name.clone()), e.params.get(0).unwrap().token.clone(), new_args);
+        // OLD: let new_e = Expr::new(NodeType::Identifier(f_name.clone()), e.params.get(0).unwrap().token.clone(), new_args);
+        let temp_e = e.params.get(0).unwrap();
+        let new_e = Expr::new_explicit(NodeType::Identifier(f_name.clone()), new_args, temp_e.line, temp_e.col, &temp_e.token_str);
         return lbool_in_string_to_bool(eval_func_proc_call(&f_name, &mut context, &new_e).as_str());
     }
     return lbool_in_string_to_bool(eval_func_proc_call(&f_name, &mut context, &e).as_str());
