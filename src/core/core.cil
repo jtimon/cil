@@ -1,6 +1,6 @@
 mode lib
 
-import("src/core/ext/funcs.cil")
+// import("src/core/ext/funcs.cil") // TODO fix
 
 not := ext_func(a: bool) returns bool;
 and := ext_func(args: ..bool) returns bool;
