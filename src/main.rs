@@ -2797,7 +2797,7 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
         // TODO Handle UFCS in check_types instead of waiting for invalid types to be discovered during evaluation
         let id_expr = e.get(0);
         let mut extra_arg = false;
-        let f_name = if id_expr.params.len() == 0 {
+        let mut f_name = if id_expr.params.len() == 0 {
             get_func_name_in_call(&e)
         } else {
             extra_arg = true;
@@ -2806,6 +2806,13 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
                 _ => panic!("panic eval_func_proc_call(), this should never happen."),
             }
         };
+
+        let symbol_info = context.symbols.get(name).unwrap();
+        let type_name = value_type_to_str(&symbol_info.value_type);
+        let struct_def = context.struct_defs.get(&type_name).unwrap();
+        if struct_def.members.contains_key(&f_name) {
+            f_name = format!("{}.{}", type_name, f_name);
+        }
 
         if extra_arg {
             let id_expr_name = get_func_name_in_call(&e);
