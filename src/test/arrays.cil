@@ -1,0 +1,4 @@
+mode test
+
+// strings : ArrayString = []
+// test(eq(array_str_len(strings), 0), "The length of empty an ArrayString must be zero")

@@ -463,6 +463,7 @@ enum ValueType {
     TBool,
     TString,
     TI64,
+    TArrayString,
     TList,
     TFunc,
     TProc,
@@ -481,6 +482,7 @@ fn value_type_to_str(arg_type: &ValueType) -> String {
         ValueType::TBool => "bool".to_string(),
         ValueType::TI64 => "i64".to_string(),
         ValueType::TString =>" String".to_string(),
+        ValueType::TArrayString => "ArrayString".to_string(),
         ValueType::TList => "list".to_string(),
         ValueType::TFunc => "func".to_string(),
         ValueType::TProc => "proc".to_string(),
@@ -1835,7 +1837,7 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
                     }
                 },
 
-                ValueType::TType | ValueType::TBool | ValueType::TI64 | ValueType::TString | ValueType::TList |
+                ValueType::TType | ValueType::TBool | ValueType::TI64 | ValueType::TString | ValueType::TArrayString | ValueType::TList |
                 ValueType::TMulti(_) | ValueType::TCustom(_) | ValueType::ToInferType => {
                     context.symbols.insert(decl.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: decl.is_mut});
                 },
@@ -2877,6 +2879,10 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
             context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
             return string_expr_result
         },
+        ValueType::TArrayString => {
+            panic!("{}:{} {} eval error: Cannot declare {} of type {:?}. Not implemented yet.",
+                   e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type)
+        },
         ValueType::TEnumDef => {
             match &inner_e.node_type {
                 NodeType::EnumDef(enum_def) => {
@@ -2927,6 +2933,10 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
                                 ValueType::TString => {
                                     let string_expr_result = eval_expr(&mut context, default_value);
                                     context.insert_string(&combined_name, string_expr_result);
+                                },
+                                ValueType::TArrayString => {
+                                    panic!("{}:{} {} eval error: Cannot declare {} field of type {:?}. Not implemented yet.",
+                                           e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type)
                                 },
                                 ValueType::TFunc | ValueType::TProc | ValueType::TMacro => {
                                     match &default_value.node_type {
@@ -3024,6 +3034,10 @@ fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> Strin
             let string_expr_result = eval_expr(&mut context, inner_e);
             context.insert_string(var_name, string_expr_result.clone());
             string_expr_result
+        },
+        ValueType::TArrayString => {
+            panic!("{}:{} {} eval error: Cannot assign to '{}' of type '{}'. Not implemented yet.",
+                   e.line, e.col, LANG_NAME, var_name, value_type_to_str(&value_type))
         },
         ValueType::TStructDef => {
             panic!("{}:{} {} eval error: Cannot assign {} of type {:?}. Not implemented yet.",

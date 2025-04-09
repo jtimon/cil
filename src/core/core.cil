@@ -60,8 +60,9 @@ writefile := ext_proc(path: String, contents: String) returns String; // TODO
 # array_i64_len := ext_func(a: ArrayI64) returns i64;
 # array_i64_get := ext_func(a: ArrayI64, pos: i64) returns i64;
 
-# array_str_len := ext_func(a: ArrayString) returns i64;
-# array_str_get := ext_func(a: ArrayString, pos: i64) returns String;
+array_str_len := ext_func(a: ArrayString) returns i64;
+array_str_get := ext_func(a: ArrayString, pos: i64) returns String;
+array_str_push := ext_func(a: ArrayString, pos: i64) returns String;
 
 // TODO implement macros:
 // array_struct_len := ext_func(a: ArrayStruct) returns i64;
