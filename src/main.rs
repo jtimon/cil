@@ -1521,7 +1521,10 @@ impl Context {
     }
 
     fn insert_bool(self: &mut Context, id: &str, bool_str: &String) -> Option<bool> {
-        let bool_to_insert = lbool_in_string_to_bool(bool_str);
+        let bool_to_insert = match lbool_in_string_to_bool(bool_str) {
+            Ok(_result) => _result,
+            Err(error_string) => panic!("{}", error_string),
+        };
         let mut to_insert = Vec::new();
 
         if bool_to_insert { // TODO this shouldn't work, it should be the other way around
@@ -1771,7 +1774,14 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
         NodeType::FCall => {
             let f_name = get_func_name_in_call(&e);
             if f_name == "import" {
-                eval_core_proc_import(context, &e);
+                match eval_core_proc_import(context, &e) {
+                    Err(error_string) => {
+                        errors.push(format!("{}:{}: compiler error: error importing.", e.line, e.col));
+                        errors.push(error_string);
+                        return errors;
+                    },
+                    _ => {}
+                }
             }
         },
         NodeType::Declaration(decl) => {
@@ -2355,7 +2365,7 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
 
 // ---------- eval repl interpreter
 
-fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
+fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> Result<bool, String> {
     // TODO refactor common code with eval_func_proc_call() to reuse
     let id_expr = e.get(0);
     let mut extra_arg = false;
@@ -2365,12 +2375,12 @@ fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
         extra_arg = true;
         match &id_expr.get(0).node_type {
             NodeType::Identifier(f_name) => f_name.clone(),
-            _ => panic!("panic eval_call_to_bool(), this should never happen."),
+            _ => return Err(format!("{}:{}: {} error: panic eval_call_to_bool(), this should never happen.", e.line, e.col, LANG_NAME)),
         }
     };
 
     if !does_func_return_bool(&context, &f_name) {
-        panic!("{} error: eval_to_bool(): Function '{}' does not return bool. This should have been caught in the compile phase.\n", LANG_NAME, f_name);
+        return Err(format!("{}:{}: {} error: eval_to_bool(): Function '{}' does not return bool. This should have been caught in the compile phase.\n", e.line, e.col, LANG_NAME, f_name));
     }
 
     if extra_arg {
@@ -2380,20 +2390,22 @@ fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
         new_args.push(extr_arg_e);
         new_args.extend(e.params.clone());
         let new_e = Expr::new_clone(NodeType::Identifier(f_name.clone()), e.get(0), new_args);
-        return lbool_in_string_to_bool(eval_func_proc_call(&f_name, &mut context, &new_e).as_str());
+        let result = eval_func_proc_call(&f_name, &mut context, &new_e)?;
+        return lbool_in_string_to_bool(result.as_str());
     }
-    return lbool_in_string_to_bool(eval_func_proc_call(&f_name, &mut context, &e).as_str());
+    let result = eval_func_proc_call(&f_name, &mut context, &e)?;
+    return lbool_in_string_to_bool(result.as_str());
 }
 
-fn eval_to_bool(mut context: &mut Context, e: &Expr) -> bool {
+fn eval_to_bool(mut context: &mut Context, e: &Expr) -> Result<bool, String> {
 
     match &e.node_type {
-        NodeType::LBool(b_value) => return *b_value,
+        NodeType::LBool(b_value) => return Ok(*b_value),
         NodeType::FCall => return eval_call_to_bool(&mut context, &e),
         NodeType::Identifier(name) => {
             match context.get_bool(name) {
                 Some(bool_) => {
-                    return bool_.clone();
+                    return Ok(bool_.clone());
                 },
                 None => {},
             }
@@ -2401,7 +2413,7 @@ fn eval_to_bool(mut context: &mut Context, e: &Expr) -> bool {
                 let struct_def = context.struct_defs.get(name).unwrap();
 
                 if e.params.len() == 0 {
-                    panic!("{} error: eval_to_bool(): struct '{}' is not a bool.", LANG_NAME, name);
+                    return Err(format!("{}:{}: {} error: eval_to_bool(): struct '{}' is not a bool.", e.line, e.col, LANG_NAME, name));
                 }
                 let after_dot = e.get(0);
                 match &after_dot.node_type {
@@ -2409,184 +2421,191 @@ fn eval_to_bool(mut context: &mut Context, e: &Expr) -> bool {
                         let member_decl = match struct_def.members.get(after_dot_name) {
                             Some(_member) => _member,
                             None => {
-                                panic!("{} eval error: eval_to_bool(): struct '{}' has no member '{}'", LANG_NAME, name, after_dot_name);
+                                return Err(format!("{}:{}: {} eval error: eval_to_bool(): struct '{}' has no member '{}'", e.line, e.col, LANG_NAME, name, after_dot_name));
                             },
                         };
 
                         let combined_name = format!("{}.{}", name, after_dot_name);
                         match context.get_bool(&combined_name) {
                             Some(bool_) => {
-                                return bool_.clone();
+                                return Ok(bool_.clone());
                             },
                             None => {},
                         }
-                        panic!("{} eval error: eval_to_bool(): '{}' is not a bool, it is a '{}'",
-                               LANG_NAME, combined_name, value_type_to_str(&member_decl.value_type));
+                        return Err(format!("{}:{}: {} eval error: eval_to_bool(): '{}' is not a bool, it is a '{}'",
+                               e.line, e.col, LANG_NAME, combined_name, value_type_to_str(&member_decl.value_type)));
                     },
 
                     _ => {
-                        panic!("{} eval error: eval_to_bool(): expected identifier after '{}.' found {:?}",
-                               LANG_NAME, name, after_dot.node_type);
+                        return Err(format!("{}:{}: {} eval error: eval_to_bool(): expected identifier after '{}.' found {:?}",
+                               e.line, e.col, LANG_NAME, name, after_dot.node_type));
                     },
                 }
             }
 
-            panic!("{} eval error: eval_to_bool(): Identifier '{}' is not a bool.", LANG_NAME, name);
+            return Err(format!("{}:{}: {} eval error: eval_to_bool(): Identifier '{}' is not a bool.", e.line, e.col, LANG_NAME, name));
         },
         node_type => {
-            panic!("{} eval error: eval_to_bool(): The only types that can be evaluated to bool are currently 'LBool', 'FCall' and 'Identifier'. Found '{:?}'",
-                   LANG_NAME, node_type)
+            return Err(format!("{}:{}: {} eval error: eval_to_bool(): The only types that can be evaluated to bool are currently 'LBool', 'FCall' and 'Identifier'. Found '{:?}'",
+                   e.line, e.col, LANG_NAME, node_type))
         },
     }
 }
 
 // ---------- core funcs implementations for eval
 
-fn eval_core_func_and(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_and(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     let mut truthfulness = true;
     for i in 1..e.params.len() {
-        truthfulness = truthfulness && eval_to_bool(&mut context, &e.get(i));
+        truthfulness = truthfulness && match eval_to_bool(&mut context, &e.get(i)) {
+            Ok(_result) => _result,
+            Err(error_string) => return Err(error_string),
+        };
     }
-    truthfulness.to_string()
+    return Ok(truthfulness.to_string());
 }
 
-fn eval_core_func_or(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_or(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     let mut truthfulness = false;
     for i in 1..e.params.len() {
-        truthfulness = truthfulness || eval_to_bool(&mut context, &e.get(i));
+        truthfulness = truthfulness || match eval_to_bool(&mut context, &e.get(i)) {
+            Ok(_result) => _result,
+            Err(error_string) => return Err(error_string),
+        };
     }
-    truthfulness.to_string()
+    return Ok(truthfulness.to_string());
 }
 
-fn eval_core_func_not(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_not(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "{} Error: Core func 'not' only takes 1 argument. This should never happen.", LANG_NAME);
-    (!eval_to_bool(&mut context, &e.get(1))).to_string()
+    return Ok((!eval_to_bool(&mut context, &e.get(1))?).to_string());
 }
 
-fn eval_core_func_eq(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_eq(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a == b).to_string()
+    let a = &(eval_expr(&mut context, e.get(1))?).parse::<i64>().unwrap();
+    let b = &(eval_expr(&mut context, e.get(2))?).parse::<i64>().unwrap();
+    return Ok((a == b).to_string());
 }
 
-fn eval_core_func_str_eq(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_str_eq(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'str_eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
     let a = &eval_expr(&mut context, e.get(1));
     let b = &eval_expr(&mut context, e.get(2));
-    return (a == b).to_string()
+    return Ok((a == b).to_string());
 }
 
-fn eval_core_func_concat(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_concat(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'concat' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = eval_expr(&mut context, e.get(1));
-    let b = eval_expr(&mut context, e.get(2));
-    return format!("{}{}", a, b)
+    let a = eval_expr(&mut context, e.get(1))?;
+    let b = eval_expr(&mut context, e.get(2))?;
+    return Ok(format!("{}{}", a, b));
 }
 
-fn eval_core_func_str_len(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_str_len(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "{} Error: Core func 'concat' takes exactly 1 argument. This should never happen.", LANG_NAME);
-    let a = eval_expr(&mut context, e.get(1));
-    return format!("{}", a.len())
+    let a = eval_expr(&mut context, e.get(1))?;
+    return Ok(format!("{}", a.len()));
 }
 
-fn eval_core_func_str_get_substr(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_str_get_substr(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 4, "{} Error: Core func 'concat' takes exactly 3 arguments. This should never happen.", LANG_NAME);
-    let a = eval_expr(&mut context, e.get(1));
-    let start = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    let end = &eval_expr(&mut context, e.get(3)).parse::<i64>().unwrap();
-    return format!("{}", &a[*start as usize..*end as usize]);
+
+    let a = &eval_expr(&mut context, e.get(1))?;
+    let start = eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    let end = eval_expr(&mut context, e.get(3))?.parse::<i64>().unwrap();
+    return Ok(format!("{}", a[start as usize..end as usize].to_string()));
 }
 
-fn eval_core_func_lt(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_lt(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a < b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a < b).to_string());
 }
 
-fn eval_core_func_lteq(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_lteq(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a <= b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a <= b).to_string());
 }
 
-fn eval_core_func_gt(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_gt(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a > b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a > b).to_string());
 }
 
-fn eval_core_func_gteq(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_gteq(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a >= b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a >= b).to_string());
 }
 
-fn eval_core_func_add(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_add(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a + b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a + b).to_string());
 }
 
-fn eval_core_func_sub(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_sub(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a - b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a - b).to_string());
 }
 
-fn eval_core_func_mul(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_mul(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a * b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a * b).to_string());
 }
 
-fn eval_core_func_div(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_div(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 3, "{} Error: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
-    let b = &eval_expr(&mut context, e.get(2)).parse::<i64>().unwrap();
-    (a / b).to_string()
+    let a = &eval_expr(&mut context, e.get(1))?.parse::<i64>().unwrap();
+    let b = &eval_expr(&mut context, e.get(2))?.parse::<i64>().unwrap();
+    return Ok((a / b).to_string());
 }
 
-fn eval_core_func_atoi(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_atoi(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "{} Error: Core func 'atoi' takes exactly 1 argument. This should never happen.", LANG_NAME);
-    let a = &eval_expr(&mut context, &e.get(1)).parse::<i64>().unwrap();
-    return a.to_string();
+    let a = &eval_expr(&mut context, &e.get(1))?.parse::<i64>().unwrap();
+    return Ok(a.to_string());
 }
 
-fn eval_core_func_itoa(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_func_itoa(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "{} Error: Core func 'itoa' takes exactly 1 argument. This should never happen.", LANG_NAME);
-    eval_expr(&mut context, e.get(1))
+    return eval_expr(&mut context, e.get(1))
 }
 
 // ---------- core procs implementations for eval
 
-fn lbool_in_string_to_bool(b: &str) -> bool {
+fn lbool_in_string_to_bool(b: &str) -> Result<bool, String> {
     match b {
-        "true" => true,
-        "false" => false,
-        _ => panic!("{} Error: expected string 'true' or 'false', found '{}'. this should never happen.", LANG_NAME, b)
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(format!("{} Error: expected string 'true' or 'false', found '{}'. this should never happen.", LANG_NAME, b))
     }
 }
 
-fn eval_core_proc_print(end_line: bool, mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_print(end_line: bool, mut context: &mut Context, e: &Expr) -> Result<String, String> {
     for i in 1..e.params.len() {
-        print!("{}", eval_expr(&mut context, &e.get(i)));
+        print!("{}", eval_expr(&mut context, &e.get(i))?);
     }
     if end_line {
         print!("\n");
     }
     io::stdout().flush().unwrap();
-    "".to_string()
+    return Ok("".to_string())
 }
 
-fn eval_core_proc_input_read_line(mut _context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_input_read_line(mut _context: &mut Context, e: &Expr) -> Result<String, String> {
     let first_param = e.get(0);
     let read_line_error_msg = match &first_param.node_type {
         NodeType::LString(error_msg_) => error_msg_.clone(),
@@ -2598,53 +2617,58 @@ fn eval_core_proc_input_read_line(mut _context: &mut Context, e: &Expr) -> Strin
         .read_line(&mut line)
         .expect(&read_line_error_msg);
 
-    return line.to_string()
+    return Ok(line.to_string())
 }
 
-fn eval_core_proc_eval_to_str(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_eval_to_str(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     // TODO properly implement
     assert!(e.params.len() == 2, "eval_core_proc_eval_to_str expects a single parameter.");
     let path = "eval".to_string(); // TODO Bring the path down here
-    let str_source = format!("mode script; {}", &eval_expr(&mut context, e.get(1)));
-    return main_run(false, &mut context, &path, str_source, Vec::new());
+    let str_source = format!("mode script; {}", &eval_expr(&mut context, e.get(1))?);
+    return main_run(false, &mut context, &path, str_source, Vec::new())
 }
 
-fn eval_core_proc_runfile(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_runfile(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() >= 2, "eval_core_proc_runfile expects at least 1 parameter.");
-    let path = &eval_expr(&mut context, e.get(1));
+    let path = &eval_expr(&mut context, e.get(1))?;
     let mut main_args = Vec::new();
     for i in 2..e.params.len() {
-        main_args.push(eval_expr(&mut context, e.get(i)));
+        main_args.push(eval_expr(&mut context, e.get(i))?);
     }
-    run_file(&path, main_args);
-    return "".to_string();
+
+    // return match run_file(&path, main_args) {
+    //     Ok(_) => {},
+    //     Err(error_string) => Err(error_string),
+    // };
+    run_file(&path, main_args)?;
+    return Ok("".to_string())
 }
 
-fn eval_core_proc_import(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_import(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "eval_core_proc_import expects a single parameter.");
-    let path = &eval_expr(&mut context, e.get(1));
-    run_file_with_context(true, &mut context, &path, Vec::new());
-    return "".to_string();
+    let path = &eval_expr(&mut context, e.get(1))?;
+    run_file_with_context(true, &mut context, &path, Vec::new())?;
+    return Ok("".to_string())
 }
 
-fn eval_core_proc_readfile(mut context: &mut Context, e: &Expr) -> String {
+fn eval_core_proc_readfile(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "eval_core_proc_readfile expects a single parameter.");
-    let path = &eval_expr(&mut context, e.get(1));
+    let path = &eval_expr(&mut context, e.get(1))?;
     let source: String = match fs::read_to_string(path) {
         Ok(file) => file,
         Err(error) => match error.kind() {
             ErrorKind::NotFound => {
-                panic!("File {} not found.", path);
+                return Err(format!("{}:{}: File {} not found.", path, e.line, e.col));
             },
             other_error => {
-                panic!("Problem opening the file: {other_error:?}");
+                return Err(format!("{}:{}: Problem opening the file: {other_error:?}", e.line, e.col));
             },
         },
     };
-    return source;
+    return Ok(source)
 }
 
-fn eval_core_exit(e: &Expr) -> String {
+fn eval_core_exit(e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "eval_core_exit expects a single parameter.");
     let e_exit_code = e.get(1);
     let exit_code = match &e_exit_code.node_type {
@@ -2661,7 +2685,7 @@ fn eval_core_exit(e: &Expr) -> String {
 
 // ---------- generic eval things
 
-fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, context: &Context, e: &Expr) -> String {
+fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, context: &Context, e: &Expr) -> Result<String, String> {
 
     let mut function_context = context.clone();
     let has_multi_arg = func_proc_has_multi_arg(func_def);
@@ -2678,22 +2702,22 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, context: &Context, 
         function_context.symbols.insert(arg.name.to_string(), SymbolInfo{value_type: arg.value_type.clone(), is_mut: arg.is_mut});
         match &arg.value_type {
             ValueType::TBool => {
-                let result = &eval_expr(&mut function_context, &e.get(param_index));
+                let result = &eval_expr(&mut function_context, &e.get(param_index))?;
                 function_context.insert_bool(&arg.name, result);
             },
             ValueType::TI64 =>  {
-                let result = &eval_expr(&mut function_context, &e.get(param_index));
+                let result = &eval_expr(&mut function_context, &e.get(param_index))?;
                 function_context.insert_i64(&arg.name, result);
             },
             ValueType::TString =>  {
-                let result = eval_expr(&mut function_context, &e.get(param_index));
+                let result = eval_expr(&mut function_context, &e.get(param_index))?;
                 function_context.insert_string(&arg.name, result);
             },
             ValueType::TMulti(ref _multi_value_type) => {
                 // TODO support variadic arguments for user defined functions
             },
             ValueType::TCustom(ref custom_type_name) => {
-                let result = eval_expr(&mut function_context, &e.get(param_index));
+                let result = &eval_expr(&mut function_context, &e.get(param_index))?;
                 let custom_symbol = function_context.symbols.get(custom_type_name).unwrap();
                 match custom_symbol.value_type {
                     ValueType::TEnumDef => {
@@ -2722,59 +2746,59 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, context: &Context, 
             },
             NodeType::If => {
                 assert!(se.params.len() == 2 || se.params.len() == 3, "{} error: if nodes must have 2 or 3 parameters.", LANG_NAME);
-                if eval_to_bool(&mut function_context, &se.get(0)) {
+                if eval_to_bool(&mut function_context, &se.get(0))? {
                     return eval_expr(&mut function_context, &se.get(1))
                 } else if se.params.len() == 3 {
                     return eval_expr(&mut function_context, &se.get(2))
                 }
             },
             _ => {
-                eval_expr(&mut function_context, &se);
+                return eval_expr(&mut function_context, &se);
             }
         }
     }
-    "".to_string()
+    Ok("".to_string())
 }
 
-fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_proc: bool) -> String {
-    return match name {
-        "and" => eval_core_func_and(&mut context, &e),
-        "or" => eval_core_func_or(&mut context, &e),
-        "not" => eval_core_func_not(&mut context, &e),
-        "eq" => eval_core_func_eq(&mut context, &e),
-        "str_eq" => eval_core_func_str_eq(&mut context, &e),
-        "concat" => eval_core_func_concat(&mut context, &e),
-        "str_len" => eval_core_func_str_len(&mut context, &e),
-        "str_get_substr" => eval_core_func_str_get_substr(&mut context, &e),
-        "lt" => eval_core_func_lt(&mut context, &e),
-        "lteq" => eval_core_func_lteq(&mut context, &e),
-        "gt" => eval_core_func_gt(&mut context, &e),
-        "gteq" => eval_core_func_gteq(&mut context, &e),
-        "add" => eval_core_func_add(&mut context, &e),
-        "sub" => eval_core_func_sub(&mut context, &e),
-        "mul" => eval_core_func_mul(&mut context, &e),
-        "div" => eval_core_func_div(&mut context, &e),
-        "atoi" => eval_core_func_atoi(&mut context, &e),
-        "itoa" => eval_core_func_itoa(&mut context, &e),
-        "eval_to_str" => eval_core_proc_eval_to_str(&mut context, &e),
-        "exit" => eval_core_exit(&e),
+fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_proc: bool) -> Result<String, String> {
+    return Ok(match name {
+        "and" => eval_core_func_and(&mut context, &e)?,
+        "or" => eval_core_func_or(&mut context, &e)?,
+        "not" => eval_core_func_not(&mut context, &e)?,
+        "eq" => eval_core_func_eq(&mut context, &e)?,
+        "str_eq" => eval_core_func_str_eq(&mut context, &e)?,
+        "concat" => eval_core_func_concat(&mut context, &e)?,
+        "str_len" => eval_core_func_str_len(&mut context, &e)?,
+        "str_get_substr" => eval_core_func_str_get_substr(&mut context, &e)?,
+        "lt" => eval_core_func_lt(&mut context, &e)?,
+        "lteq" => eval_core_func_lteq(&mut context, &e)?,
+        "gt" => eval_core_func_gt(&mut context, &e)?,
+        "gteq" => eval_core_func_gteq(&mut context, &e)?,
+        "add" => eval_core_func_add(&mut context, &e)?,
+        "sub" => eval_core_func_sub(&mut context, &e)?,
+        "mul" => eval_core_func_mul(&mut context, &e)?,
+        "div" => eval_core_func_div(&mut context, &e)?,
+        "atoi" => eval_core_func_atoi(&mut context, &e)?,
+        "itoa" => eval_core_func_itoa(&mut context, &e)?,
+        "eval_to_str" => eval_core_proc_eval_to_str(&mut context, &e)?,
+        "exit" => eval_core_exit(&e)?,
         "import" => "".to_string(), // Should already be imported in init_context
-        "input_read_line" => eval_core_proc_input_read_line(&mut context, &e),
-        "print" => eval_core_proc_print(false, &mut context, &e),
-        "println" => eval_core_proc_print(true, &mut context, &e),
-        "readfile" => eval_core_proc_readfile(&mut context, &e),
-        "runfile" => eval_core_proc_runfile(&mut context, &e),
+        "input_read_line" => eval_core_proc_input_read_line(&mut context, &e)?,
+        "print" => eval_core_proc_print(false, &mut context, &e)?,
+        "println" => eval_core_proc_print(true, &mut context, &e)?,
+        "readfile" => eval_core_proc_readfile(&mut context, &e)?,
+        "runfile" => eval_core_proc_runfile(&mut context, &e)?,
         _ => {
             if is_proc {
-                panic!("{}:{} {} eval error: Core procedure '{}' not implemented.", e.line, e.col, LANG_NAME, name);
+                return Err(format!("{}:{} {} eval error: Core procedure '{}' not implemented.", e.line, e.col, LANG_NAME, name));
             } else {
-                panic!("{}:{} {} eval error: Core function '{}' not implemented.", e.line, e.col, LANG_NAME, name);
+                return Err(format!("{}:{} {} eval error: Core function '{}' not implemented.", e.line, e.col, LANG_NAME, name));
             }
         },
-    }
+    })
 }
 
-fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> String {
+fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Result<String, String> {
     if context.funcs.contains_key(name) {
         let func_def = context.funcs.get(name).unwrap();
         if func_def.is_ext() {
@@ -2841,7 +2865,7 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
     }
 }
 
-fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Expr) -> String {
+fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Expr) -> Result<String, String> {
     let inner_e = e.get(0);
     let value_type = match get_value_type(&context, &inner_e) {
         Ok(val_type) => val_type,
@@ -2860,29 +2884,29 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
             panic!("{}:{} {} eval error: '{}' declared of type {} but but still to infer type {:?}.", e.line, e.col, LANG_NAME, declaration.name, value_type_to_str(&declaration.value_type), value_type_to_str(&value_type));
         },
         ValueType::TBool => {
-            let bool_expr_result_str = eval_expr(&mut context, inner_e);
+            let bool_expr_result_str = eval_expr(&mut context, inner_e)?;
             context.insert_bool(&declaration.name, &bool_expr_result_str);
             context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
-            return bool_expr_result_str
+            return Ok(bool_expr_result_str)
         },
         ValueType::TI64 => {
-            let i64_expr_result_str = eval_expr(&mut context, inner_e);
+            let i64_expr_result_str = eval_expr(&mut context, inner_e)?;
             context.insert_i64(&declaration.name, &i64_expr_result_str);
             context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
-            return i64_expr_result_str
+            return Ok(i64_expr_result_str)
         },
         ValueType::TString => {
-            let string_expr_result = eval_expr(&mut context, inner_e);
+            let string_expr_result = eval_expr(&mut context, inner_e)?;
             context.insert_string(&declaration.name, string_expr_result.clone());
             context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
-            return string_expr_result
+            return Ok(string_expr_result)
         },
         ValueType::TEnumDef => {
             match &inner_e.node_type {
                 NodeType::EnumDef(enum_def) => {
                     context.enum_defs.insert(declaration.name.clone(), enum_def.clone());
                     context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
-                    "enum declared".to_string()
+                    return Ok("enum declared".to_string())
                 },
                 _ => panic!("{}:{} {} eval error: Cannot declare {} of type {:?}, expected enum definition.",
                             e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type)
@@ -2917,15 +2941,15 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
 
                             match member_value_type {
                                 ValueType::TBool => {
-                                    let bool_expr_result_str = eval_expr(&mut context, default_value);
+                                    let bool_expr_result_str = eval_expr(&mut context, default_value)?;
                                     context.insert_bool(&combined_name, &bool_expr_result_str);
                                 },
                                 ValueType::TI64 => {
-                                    let i64_expr_result_str = eval_expr(&mut context, default_value);
+                                    let i64_expr_result_str = eval_expr(&mut context, default_value)?;
                                     context.insert_i64(&combined_name, &i64_expr_result_str);
                                 },
                                 ValueType::TString => {
-                                    let string_expr_result = eval_expr(&mut context, default_value);
+                                    let string_expr_result = eval_expr(&mut context, default_value)?;
                                     context.insert_string(&combined_name, string_expr_result);
                                 },
                                 ValueType::TFunc | ValueType::TProc | ValueType::TMacro => {
@@ -2954,7 +2978,7 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
                                                    SymbolInfo{value_type: member_decl.value_type.clone(), is_mut: member_decl.is_mut});
                         }
                     }
-                    "struct declared".to_string()
+                    return Ok("struct declared".to_string())
                 },
                 _ => panic!("{}:{} {} eval error: Cannot declare {} of type {:?}, expected struct definition.",
                             e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type)
@@ -2965,7 +2989,7 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
                 NodeType::FuncDef(func_def) => {
                     context.funcs.insert(declaration.name.to_string(), func_def.clone());
                     context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
-                    return format!("{} declared", value_type_to_str(&value_type));
+                    return Ok(format!("{} declared", value_type_to_str(&value_type)));
                 },
                 _ => panic!("{}:{} {} eval error: Cannot declare {} of type {:?}, expected {} definition.",
                             e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type, value_type_to_str(&value_type))
@@ -2976,7 +3000,7 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
             context.symbols.insert(declaration.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: declaration.is_mut});
             let custom_symbol = context.symbols.get(custom_type_name).unwrap();
             if custom_symbol.value_type == ValueType::TEnumDef {
-                let enum_expr_result_str = &eval_expr(&mut context, inner_e);
+                let enum_expr_result_str = &eval_expr(&mut context, inner_e)?;
                 context.insert_enum(&declaration.name, custom_type_name, enum_expr_result_str);
             } else if custom_symbol.value_type == ValueType::TStructDef {
                 panic!("{}:{} {} eval error: Cannot declare '{}' of type 'struct'. Not implemented yet.",
@@ -2985,7 +3009,7 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
                 panic!("{}:{} {} eval error: Cannot declare '{}' of type '{}'. Only 'enum' and 'struct' custom types allowed.",
                        e.line, e.col, LANG_NAME, &declaration.name, value_type_to_str(&custom_symbol.value_type))
             }
-            return format!("{} declared", custom_type_name)
+            return Ok(format!("{} declared", custom_type_name))
         },
         ValueType::TType | ValueType::TList | ValueType::TMulti(_) => {
             panic!("{}:{} {} eval error: Cannot declare {} of type {:?}.", e.line, e.col, LANG_NAME, &declaration.name, &declaration.value_type)
@@ -2993,7 +3017,7 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
     }
 }
 
-fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> String {
+fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> Result<String, String> {
     let symbol_info = context.symbols.get(var_name).unwrap();
     assert!(symbol_info.is_mut, "{} eval error: Assignments can only be to mut values", LANG_NAME);
     assert!(e.params.len() == 1, "{} eval error: in eval_assignment, while assigning to {}, assignments must take exactly one value.", LANG_NAME, var_name);
@@ -3011,19 +3035,19 @@ fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> Strin
         },
 
         ValueType::TBool => {
-            let bool_expr_result_str = eval_expr(&mut context, inner_e);
+            let bool_expr_result_str = &eval_expr(&mut context, inner_e)?;
             context.insert_bool(var_name, &bool_expr_result_str);
-            return bool_expr_result_str
+            return Ok(bool_expr_result_str.to_string())
         },
         ValueType::TI64 => {
-            let i64_expr_result_str = eval_expr(&mut context, inner_e);
+            let i64_expr_result_str = &eval_expr(&mut context, inner_e)?;
             context.insert_i64(var_name, &i64_expr_result_str);
-            return i64_expr_result_str
+            return Ok(i64_expr_result_str.to_string())
         },
         ValueType::TString => {
-            let string_expr_result = eval_expr(&mut context, inner_e);
+            let string_expr_result = &eval_expr(&mut context, inner_e)?;
             context.insert_string(var_name, string_expr_result.clone());
-            string_expr_result
+            return Ok(string_expr_result.to_string())
         },
         ValueType::TStructDef => {
             panic!("{}:{} {} eval error: Cannot assign {} of type {:?}. Not implemented yet.",
@@ -3033,7 +3057,7 @@ fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> Strin
             match &inner_e.node_type {
                 NodeType::FuncDef(func_def) => {
                     context.funcs.insert(var_name.to_string(), func_def.clone());
-                    "func declared".to_string()
+                    Ok("funcion declared".to_string())
                 },
                 _ => panic!("{}:{} {} eval error: Cannot assign {} to function type {}.",
                             e.line, e.col, LANG_NAME, &var_name, value_type_to_str(&value_type))
@@ -3046,21 +3070,21 @@ fn eval_assignment(var_name: &str, mut context: &mut Context, e: &Expr) -> Strin
     }
 }
 
-fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
+fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> Result<String, String> {
 
     match context.symbols.get(name) {
         Some(symbol_info) => match symbol_info.value_type {
             ValueType::TBool => {
-                return context.get_bool(name).unwrap().to_string()
+                return Ok(context.get_bool(name).unwrap().to_string())
             },
             ValueType::TI64 => {
-                return context.get_i64(name).unwrap().to_string()
+                return Ok(context.get_i64(name).unwrap().to_string())
             },
             ValueType::TString => {
-                return context.get_string(name).unwrap().to_string()
+                return Ok(context.get_string(name).unwrap().to_string())
             },
             ValueType::TFunc | ValueType::TProc | ValueType::TMacro => {
-                return name.to_string();
+                return Ok(name.to_string())
             },
             ValueType::TEnumDef => {
                 assert!(e.params.len() > 0, "{} eval error: enum type '{}' can't be used as a primary expression.", LANG_NAME, name);
@@ -3070,7 +3094,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                     NodeType::Identifier(inner_name) => {
                         // TODO check that inner_name is in enum_def
                         // TODO check if that inner_name has an optional type
-                        return format!("{}.{}", name, inner_name);
+                        return Ok(format!("{}.{}", name, inner_name));
                     },
                     _ => {
                         panic!("{} eval error: identifier '{}' should only have identifiers inside.", LANG_NAME, name)
@@ -3089,7 +3113,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                                 match member_decl.value_type {
                                     ValueType::TString => {
                                         match context.get_string(&format!("{}.{}", name, inner_name)) {
-                                            Some(result_str) => return result_str.to_string(),
+                                            Some(result_str) => return Ok(result_str.to_string()),
                                             None => {
                                                 panic!("{}:{}: {} eval error: value not set for '{}.{}'",
                                                        e.line, e.col, LANG_NAME, name, inner_name)
@@ -3099,7 +3123,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                                     },
                                     ValueType::TI64 => {
                                         match context.get_i64(&format!("{}.{}", name, inner_name)) {
-                                            Some(result) => return result.to_string(),
+                                            Some(result) => return Ok(result.to_string()),
                                             None => {
                                                 panic!("{}:{}: {} eval error: value not set for '{}.{}'",
                                                        e.line, e.col, LANG_NAME, name, inner_name)
@@ -3109,7 +3133,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                                     },
                                     ValueType::TBool => {
                                         match context.get_bool(&format!("{}.{}", name, inner_name)) {
-                                            Some(result) => return result.to_string(),
+                                            Some(result) => return Ok(result.to_string()),
                                             None => {
                                                 panic!("{}:{}: {} eval error: value not set for '{}.{}'",
                                                        e.line, e.col, LANG_NAME, name, inner_name)
@@ -3150,7 +3174,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                 match custom_symbol.value_type {
                     ValueType::TEnumDef => {
                         let enum_val = context.get_enum(name).unwrap();
-                        return enum_val.enum_name.clone();
+                        return Ok(enum_val.enum_name.clone())
                     },
 
                     _ => {
@@ -3168,7 +3192,7 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
     }
 }
 
-fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
+fn eval_expr(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     match &e.node_type {
         NodeType::Body => {
             for se in e.params.iter() {
@@ -3177,17 +3201,17 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
                         return eval_expr(&mut context, &se);
                     }
                     _ => {
-                        eval_expr(&mut context, &se);
+                        eval_expr(&mut context, &se)?;
                     }
                 }
             }
-            return "".to_string()
+            return Ok("".to_string())
         },
-        NodeType::LBool(bool_value) => bool_value.to_string(),
-        NodeType::LI64(li64) => li64.to_string(),
-        NodeType::LString(lstring) => lstring.to_string(),
+        NodeType::LBool(bool_value) => Ok(bool_value.to_string()),
+        NodeType::LI64(li64) => Ok(li64.to_string()),
+        NodeType::LString(lstring) => Ok(lstring.to_string()),
         NodeType::LList(list_str_) => {
-            return list_str_.to_string()
+            return Ok(list_str_.to_string())
         },
         NodeType::FCall => {
             let f_name = get_func_name_in_call(&e);
@@ -3204,20 +3228,20 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
         },
         NodeType::If => {
             assert!(e.params.len() == 2 || e.params.len() == 3, "{} eval error: if nodes must have 2 or 3 parameters.", LANG_NAME);
-            if eval_to_bool(&mut context, &e.get(0)) {
+            if eval_to_bool(&mut context, &e.get(0))? {
                 eval_expr(&mut context, &e.get(1))
             } else if e.params.len() == 3 {
                 eval_expr(&mut context, &e.get(2))
             } else {
-                "".to_string()
+                return Ok("".to_string())
             }
         },
         NodeType::While => {
             assert!(e.params.len() == 2, "{} eval error: while nodes must have exactly 2 parameters.", LANG_NAME);
-            while eval_to_bool(&mut context, &e.get(0)) {
-                eval_expr(&mut context, &e.get(1));
+            while eval_to_bool(&mut context, &e.get(0))? {
+                eval_expr(&mut context, &e.get(1))?;
             }
-            "".to_string()
+            return Ok("".to_string())
         },
         NodeType::Switch => {
             assert!(e.params.len() >= 3, "{} eval error: switch nodes must have at least 3 parameters.", LANG_NAME);
@@ -3230,10 +3254,11 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
                 },
             };
             let mut param_it = 1;
-            let result_to_switch = eval_expr(&mut context, &to_switch);
+            let result_to_switch = eval_expr(&mut context, &to_switch)?;
             while param_it < e.params.len() {
 
                 let case = e.get(param_it);
+                println!("to_switch {:?}, case {:?}", to_switch, case);
                 if case.node_type == NodeType::DefaultCase {
                     param_it += 1;
                     let body = e.get(param_it);
@@ -3250,7 +3275,8 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
                     panic!("{} eval error: switch value type {:?}, case value type {:?}", LANG_NAME, value_type, case_type);
                 }
 
-                let result_case = eval_expr(&mut context, &case);
+                let result_case = eval_expr(&mut context, &case)?;
+                println!("result_to_switch {:?}, result_case {:?}", result_to_switch, result_case);
                 param_it += 1;
                 if result_to_switch == result_case {
                     let body = e.get(param_it);
@@ -3258,11 +3284,11 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
                 }
                 param_it += 1;
             }
-            return "".to_string();
+            return Ok("".to_string())
         },
         NodeType::Return => {
             if e.params.len() == 0 {
-                return "".to_string();
+                return Ok("".to_string())
             } else if e.params.len() == 1 {
                 return eval_expr(&mut context, &e.get(0))
             } else {
@@ -3363,33 +3389,18 @@ fn to_ast_str(e: &Expr) -> String {
 // ---------- main binary
 
 // TODO return Result<String, String>, so that imports that fail can be treated accordingly
-fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source: String, main_args: Vec<String>) -> String {
+fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source: String, main_args: Vec<String>) -> Result<String, String> {
 
-    let lexer = match lexer_from_source(&path, source) {
-        Ok(_result) => _result,
-        Err(error_string) => {
-            return format!("{}:{}", &path, error_string);
-        },
-    };
+    let lexer = lexer_from_source(&path, source)?;
 
     let mut current: usize = 0;
-    let mode = match parse_mode(&path, &lexer, &mut current) {
-        Ok(mode_) => mode_,
-        Err(error_string) => {
-            return format!("{}:{}", &path, error_string);
-        },
-    };
+    let mode = parse_mode(&path, &lexer, &mut current)?;
     context.mode = mode;
     if print_extra {
         println!("Mode: {}", context.mode.name);
     }
 
-    let mut e: Expr = match parse_tokens(lexer, &mut current) {
-        Ok(expr) => expr,
-        Err(error_string) => {
-            return format!("{}:{}", &path, error_string);
-        },
-    };
+    let mut e: Expr = parse_tokens(lexer, &mut current)?;
     if !SKIP_AST {
         println!("AST: \n{}", to_ast_str(&e));
     }
@@ -3399,7 +3410,7 @@ fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source:
         for err in &errors {
             println!("{}:{}", path, err);
         }
-        return format!("Compiler errors: {} declaration errors found", errors.len());
+        return Err(format!("Compiler errors: {} declaration errors found", errors.len()));
     }
     errors.extend(basic_mode_checks(&context, &e));
 
@@ -3418,22 +3429,23 @@ fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source:
         for err in &errors {
             println!("{}:{}", path, err);
         }
-        return format!("Compiler errors: {} type errors found", errors.len());
+        return Err(format!("Compiler errors: {} type errors found", errors.len()));
     }
 
     return eval_expr(&mut context, &e);
 }
 
-// ---------- main, usage, args, etc
+// ---------- real main implementation
 
-fn run_file(path: &String, main_args: Vec<String>) {
+fn run_file(path: &String, main_args: Vec<String>) -> Result<String, String> {
     let mut context = Context::new(DEFAULT_MODE);
-    run_file_with_context(true, &mut context, &"src/core/core.cil".to_string(), Vec::new());
-    run_file_with_context(true, &mut context, &"src/core/std.cil".to_string(), Vec::new());
-    run_file_with_context(false, &mut context, &path, main_args);
+    run_file_with_context(true, &mut context, &"src/core/core.cil".to_string(), Vec::new())?;
+    run_file_with_context(true, &mut context, &"src/core/std.cil".to_string(), Vec::new())?;
+    run_file_with_context(false, &mut context, &path, main_args)?;
+    return Ok("".to_string())
 }
 
-fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &String, main_args: Vec<String>) {
+fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &String, main_args: Vec<String>) -> Result<String, String> {
     let previous_mode = context.mode.clone();
     if !is_import {
         println!("Running file '{}'", &path);
@@ -3442,23 +3454,31 @@ fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &Stri
         Ok(file) => file,
         Err(error) => match error.kind() {
             ErrorKind::NotFound => {
-                panic!("File {} not found.", path);
+                return Err(format!("File {} not found.", path));
             },
             other_error => {
-                panic!("Problem opening the file: {other_error:?}");
+                return Err(format!("Problem opening the file: {:?}", other_error));
             },
         },
     };
-    let run_result = main_run(!is_import, &mut context, &path, source, main_args);
+
+    let run_result = match main_run(!is_import, &mut context, &path, source, main_args) {
+        Ok(_result) => _result,
+        Err(error_string) => return Err(format!("{}:{}:{}: {}", &path, 0, 0, error_string)),
+    };
     if run_result != "" {
         println!("{}", run_result);
     }
 
     if is_import && !can_be_imported(&context.mode) {
-        panic!("file '{}' of mode '{}' cannot be imported", path, context.mode.name)
+        return Err(format!("{}:{}:{}: mode '{}' cannot be imported\nSuggestion: try mode 'pure' or 'lib' for files to be imported",
+                           path, 0, 0, context.mode.name))
     }
     context.mode = previous_mode; // restore the context mode of the calling file
+    return Ok("".to_string())
 }
+
+// ---------- main, usage, args
 
 fn usage() {
     println!("Usage: {} [command] [path]\n", BIN_NAME);
@@ -3468,55 +3488,75 @@ fn usage() {
     println!("Commands:\n");
 
     println!("repl: read eval print loop.");
-    println!("interpret: reads a file in provided <path> and evaluates it.");
+    println!("inte: reads a file in provided <path> and evaluates/interprets it without compilation involved.");
     // println!("ast: reads a file in provided <path> and prints its abstract syntax tree (aka (lisp-like-syntax ast-from-now-on ) ).");
-    // println!("build: reads a file in provided <path> and compiles it. Not implemented yet.");
-    // println!("run: reads a file in provided <path> and runs it if it compiles. Not implemented yet.");
-    println!("help: Prints this.\n");
+    println!("comp: reads a file in provided <path> and compiles it. Not implemented until self hosting.");
+    println!("run: reads a file in provided <path> and runs it if it compiles. Not implemented until self hosting.");
+    println!("help: Prints this.");
 }
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
-    let args: Vec<String> = env::args().collect();
+    let args : Vec<String> = env::args().collect();
 
+    if args.len() == 1 {
+        // If no arguments, then repl/interactive mode
+        println!("{}", match run_file(&REPL_PATH.to_string(), Vec::new()) {
+            Ok(_result) => _result,
+            Err(_result) => _result,
+        });
+        return
+    }
 
-    if args.len() > 2 {
-        let mut main_args = Vec::new();
-        let mut i = 0;
-        for arg in &args {
-            if i > 2 {
-                main_args.push(arg.clone());
-                println!("Arg {}: {}", i, arg);
-            }
-            i += 1;
-        }
-        match args[1].as_str() {
-            "interpret" => {
-                run_file(&args[2], main_args);
-            },
-            "repl" | "build" | "run" => {
-                usage();
-            },
-            _ => {
-                println!("command '{}' not implemented.", &args[1]);
-                usage();
-            },
-        }
-
-    } else if args.len() > 1 {
+    if args.len() == 2 {
         match args[1].as_str() {
             "repl" => {
-                run_file(&REPL_PATH.to_string(), Vec::new());
+                println!("{}", match run_file(&REPL_PATH.to_string(), Vec::new()) {
+                    Ok(_result) => _result,
+                    Err(_result) => _result,
+                });
             },
-            "ast" | "interpret" | "build" | "run" |
-            "help" | "-help" | "--help"=> {
+            "inte" | "run" | "comp" | "lex" | "ast" |
+            "help" | "-help" | "--help" => {
                 usage();
             },
             _ => {
-                run_file(&args[1], Vec::new());
+                // if one unknown arg, a file to try to interpret
+                println!("{}", match run_file(&args[1], Vec::new()) {
+                    Ok(_result) => _result,
+                    Err(_result) => _result,
+                });
             },
         }
-    } else {
-        run_file(&REPL_PATH.to_string(), Vec::new()) // If not arguments, then repl/interactive "mode"
+        return
+    }
+
+    let mut main_args = Vec::new();
+    let mut i = 0;
+    for arg in &args {
+        if i > 2 {
+            main_args.push(arg.clone());
+        }
+        i += 1;
+    }
+
+    match args[1].as_str() {
+        "repl" => {
+            panic!("repl with an input file not implemented yet");
+        },
+        "inte" => {
+            print!("{}", match run_file(&args[2], main_args) {
+                Ok(_result) => _result,
+                Err(_result) => _result,
+            });
+        },
+        "run" | "comp" | "ast" |
+        "help" | "-help" | "--help" => {
+            usage();
+        },
+        _ => {
+            println!("command '{}' not implemented.", &args[1]);
+            usage();
+        },
     }
 }
