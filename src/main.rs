@@ -335,7 +335,8 @@ fn scan_tokens(source: String) -> Vec<Token> {
 
             }; // let match
             if token_type == TokenType::String {
-                scan_push_token(&mut tokens, token_type, &source[start + 1..pos], line, pos - start_line_pos + 1);
+                let parsed_newlines = source[start + 1..pos].replace("\\n", "\n");
+                scan_push_token(&mut tokens, token_type, &parsed_newlines, line, pos - start_line_pos + 1);
             } else {
                 scan_push_token(&mut tokens, token_type, &source[start..pos + 1], line, pos - start_line_pos + 1);
             }
