@@ -616,6 +616,14 @@ impl Expr {
     fn get(self: &Expr, i: usize) -> &Expr {
         return &self.params.get(i).unwrap();
     }
+
+    fn lang_error(self: &Expr, phase: &str, msg: &str) -> String {
+        return format!("{}:{}: {} {} error: {}", self.line, self.col, LANG_NAME, phase, msg)
+    }
+
+    fn error(self: &Expr, phase: &str, msg: &str) -> String {
+        return format!("{}:{}: {} error: {}", self.line, self.col, phase, msg)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1618,13 +1626,13 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
                         let member_decl = match struct_def.members.get(after_dot_name) {
                             Some(_member) => _member,
                             None => {
-                                return Err(format!("{}:{}: type error: struct '{}' has no member '{}' a", e.line, e.col, f_name, after_dot_name));
+                                return Err(e.error("type", &format!("struct '{}' has no member '{}' a", f_name, after_dot_name)));
                             },
                         };
                         let member_default_value = match struct_def.default_values.get(after_dot_name) {
                             Some(_member) => _member,
                             None => {
-                                return Err(format!("{}:{}: type error: struct '{}' has no member '{}' b", e.line, e.col, f_name, after_dot_name));
+                                return Err(e.error("type", &format!("struct '{}' has no member '{}' b", f_name, after_dot_name)));
                             },
                         };
                         match &member_default_value.node_type {
@@ -3293,11 +3301,11 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> Result<String, String> {
             } else if e.params.len() == 1 {
                 return eval_expr(&mut context, &e.get(0))
             } else {
-                panic!("{}:{}: {} eval error: mutltiple return values not implemented yet.", e.line, e.col, LANG_NAME);
+                return Err(e.lang_error("eval", "mutltiple return values not implemented yet"))
             }
         }
         _ => {
-            panic!("{}:{}: {} eval error: Not implemented, found {:?}.", e.line, e.col, LANG_NAME, e.node_type)
+            return Err(e.lang_error("eval", &format!("Not implemented, found {:?}.", e.node_type)))
         },
     }
 }
