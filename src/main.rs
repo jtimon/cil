@@ -2662,6 +2662,8 @@ fn eval_core_proc_import(mut context: &mut Context, e: &Expr) -> Result<String, 
 
 fn eval_core_proc_readfile(mut context: &mut Context, e: &Expr) -> Result<String, String> {
     assert!(e.params.len() == 2, "eval_core_proc_readfile expects a single parameter.");
+    println!("readfile path: '{:?}'", e.get(1));
+
     let path = &eval_expr(&mut context, e.get(1))?;
     let source: String = match fs::read_to_string(path) {
         Ok(file) => file,
@@ -2674,6 +2676,7 @@ fn eval_core_proc_readfile(mut context: &mut Context, e: &Expr) -> Result<String
             },
         },
     };
+    println!("readfile: '{}'", source);
     return Ok(source)
 }
 
@@ -2809,6 +2812,9 @@ fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_
 
 fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Result<String, String> {
     if context.funcs.contains_key(name) {
+        if name == "readfile" {
+            println!("readfile is about to be called");
+        }
         let func_def = context.funcs.get(name).unwrap();
         if func_def.is_ext() {
             let is_proc = func_def.is_proc();

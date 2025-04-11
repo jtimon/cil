@@ -218,6 +218,7 @@ scan_tokens := proc(source: String) {
     mut pos := 0
     mut line := 0
     mut start_line_pos := 0
+    println("Entering...scan_tokens")
 
     while lt(pos, eof_pos) {
         start := pos
@@ -394,7 +395,7 @@ scan_tokens := proc(source: String) {
                 pos = add(pos, 1)
             } // switch
         } // else
-        // println("Current char:", current_char)
+        println("Current char:", current_char)
     } // while
     scan_push_token(TokenType.Eof, "End of file", line, 0);
 }

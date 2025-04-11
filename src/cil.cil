@@ -16,7 +16,10 @@ LANG_NAME: String = "cil"
 // TODO move the repl subcommmand here, rscil only to interpret
 main := proc(path: String) {
     println("[INFO] Reading file '", path, "'")
+    // source := readfile(concat(path, "safadfs"))
     source := readfile(path)
+    println("[INFO] File contents: '", source, "'")
+
     scan_tokens(source)
 
     // TODO implement get_current_line() core func to print better errors from cil
