@@ -18,15 +18,15 @@ mode lib
 //     return true
 // }
 
-// or := func(a: bool, b: bool) returns bool {
-//     if a {
-//         return true
-//     }
-//     if b {
-//         return true
-//     }
-//     return false
-// }
+or := func(a: bool, b: bool) returns bool {
+    if a {
+        return true
+    }
+    if b {
+        return true
+    }
+    return false
+}
 
 xor := func(a: bool, b: bool) returns bool {
     // return a.and(not(b)).or(b.and(not(a))) // TODO implement UFCS (Uniform Function Call Syntax) for funccall return values

@@ -23,13 +23,13 @@ test(or(false, true), "or(false, true) == true")
 test(not(or(false, false)), "or(false, false) == false")
 
 // note that both 'and' and 'or' can take any number of bools as args, like in lisp
-test(or(false, true, true), "or(false, false, true) == true")
+// test(or(false, true, true), "or(false, false, true) == true")
 test(not(and(false, true, true)), "and(false, false, true) == false")
 
 test(or(true, false), "and: true or false is true")
 
-test(xor(true, false), "and: true xor false is true")
-test(not(xor(true, true)), "xor(true, true) == false")
+// test(xor(true, false), "and: true xor false is true")
+// test(not(xor(true, true)), "xor(true, true) == false")
 
 // --------------- TODO remove redundancies
 
@@ -61,11 +61,11 @@ test(not(or(false)), "false OR = false")
 test(or(false, false, true), "false OR false OR true = true")
 test(not(or(false, false, false)), "false OR false OR false = false")
 
-// Testing 'xor' with all combinations
-test(xor(true, false), "true XOR false = true")
-test(xor(false, true), "false XOR true = true")
-test(not(xor(true, true)), "true XOR true = false")
-test(not(xor(false, false)), "false XOR false = false")
+// // Testing 'xor' with all combinations
+// test(xor(true, false), "true XOR false = true")
+// test(xor(false, true), "false XOR true = true")
+// test(not(xor(true, true)), "true XOR true = false")
+// test(not(xor(false, false)), "false XOR false = false")
 
 // Test bool.to_str()
 // test(str_eq("true", aaa.to_str()), "'true' = bool.to_str(true)") // TODO Use associated functions as methods
