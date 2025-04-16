@@ -62,8 +62,6 @@ enum TokenType {
     // Reserved words:
     Mut,
 
-    // bool
-    True, False,
     // type definition
     Struct, Enum,
     // function definition
@@ -152,10 +150,6 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
 
         // declaration/arg modifiers
         "mut" => TokenType::Mut,
-
-        // bool literals
-        "true" => TokenType::True,
-        "false" => TokenType::False,
 
         // core data types
         "enum" => TokenType::Enum,
@@ -469,8 +463,6 @@ fn is_literal(t: &Token) -> bool {
     return match t.token_type {
         TokenType::String => true,
         TokenType::Number => true,
-        TokenType::True => true,
-        TokenType::False => true,
         _ => false,
     }
 }
@@ -478,7 +470,6 @@ fn is_literal(t: &Token) -> bool {
 #[derive(Debug, Clone, PartialEq)]
 enum ValueType {
     TType,
-    TBool,
     TString,
     TI64,
     TList,
@@ -496,7 +487,6 @@ fn value_type_to_str(arg_type: &ValueType) -> String {
     match arg_type {
         ValueType::TType => "Type".to_string(),
         ValueType::ToInferType => INFER_TYPE.to_string(),
-        ValueType::TBool => "bool".to_string(),
         ValueType::TI64 => "i64".to_string(),
         ValueType::TString =>" String".to_string(),
         ValueType::TList => "list".to_string(),
@@ -513,7 +503,6 @@ fn value_type_to_str(arg_type: &ValueType) -> String {
 fn str_to_value_type(arg_type: &str) -> ValueType {
     match arg_type {
         INFER_TYPE => ValueType::ToInferType,
-        "bool" => ValueType::TBool,
         "String" => ValueType::TString,
         "Type" => ValueType::TType,
         "list" => ValueType::TList,
@@ -584,7 +573,6 @@ enum NodeType {
     LList(String),
     LString(String),
     LI64(i64),
-    LBool(bool),
     FCall,
     Identifier(String),
     Declaration(Declaration),
@@ -776,8 +764,6 @@ fn parse_literal(t: &Token, current: &mut usize) -> Result<Expr, String> {
     let node_type = match t.token_type {
         TokenType::String => NodeType::LString(t.token_str.clone()),
         TokenType::Number => NodeType::LI64(t.token_str.parse::<i64>().unwrap()),
-        TokenType::True => NodeType::LBool(true),
-        TokenType::False => NodeType::LBool(false),
         _ => {
             return Err(format!("{}:{}: {}  ERROR: Trying to parse a token that's not a literal as a literal, found {:?}.",
                                t.line, t.col, LANG_NAME, t.token_type));
@@ -1610,6 +1596,7 @@ impl Context {
         }
     }
 
+    // "true" "false"
     fn insert_bool(self: &mut Context, id: &str, bool_str: &String) -> Option<bool> {
         let bool_to_insert = lbool_in_string_to_bool(bool_str);
         let mut to_insert = Vec::new();
@@ -1648,10 +1635,6 @@ impl Context {
                 self.insert_i64(&combined_name, value);
             },
 
-            ValueType::TBool => {
-                self.insert_bool(&combined_name, value);
-            },
-
             ValueType::TString => {
                 self.insert_string(&combined_name, value);
             },
@@ -1671,9 +1654,6 @@ impl Context {
         match decl.value_type {
             ValueType::TI64 => {
                 return self.get_i64(&combined_name).map(|value| value.to_string())
-            },
-            ValueType::TBool => {
-                return self.get_bool(&combined_name).map(|value| value.to_string())
             },
             ValueType::TString => {
                 return self.get_string(&combined_name)
@@ -1783,7 +1763,6 @@ fn value_type_func_proc(e: &Expr, name: &str, func_def: &SFuncDef) -> Result<Val
         },
         1 => {
             match func_def.returns.get(0).unwrap() {
-                ValueType::TBool => Ok(ValueType::TBool),
                 ValueType::TI64 => Ok(ValueType::TI64),
                 ValueType::TString => Ok(ValueType::TString),
                 ValueType::TCustom(type_str) => Ok(ValueType::TCustom(type_str.to_string())), // TODO find a better way
@@ -1923,7 +1902,6 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
 
 fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
     match &e.node_type {
-        NodeType::LBool(_) => Ok(ValueType::TBool),
         NodeType::LI64(_) => Ok(ValueType::TI64),
         NodeType::LString(_) => Ok(ValueType::TString),
         NodeType::LList(_) => Ok(ValueType::TList),
@@ -2103,7 +2081,7 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
                     }
                 },
 
-                ValueType::TType | ValueType::TBool | ValueType::TI64 | ValueType::TString | ValueType::TList |
+                ValueType::TType | ValueType::TI64 | ValueType::TString | ValueType::TList |
                 ValueType::TMulti(_) | ValueType::TCustom(_) | ValueType::ToInferType => {
                     context.symbols.insert(decl.name.to_string(), SymbolInfo{value_type: value_type.clone(), is_mut: decl.is_mut});
                 },
@@ -2129,7 +2107,9 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
 fn does_func_return_bool(context: &Context, name: &str) -> bool {
     if context.funcs.contains_key(name) {
         let func_def = &context.funcs.get(name).unwrap();
-        return func_def.returns.len() == 1 && *func_def.returns.get(0).unwrap() == ValueType::TBool;
+        return func_def.returns.len() == 1 && match *func_def.returns.get(0).unwrap() {
+            ValueType::TBool =>
+        );
     }
     return false;
 }
@@ -2151,7 +2131,6 @@ fn is_expr_calling_procs(context: &Context, e: &Expr) -> bool {
         NodeType::EnumDef(_) => {
             false
         },
-        NodeType::LBool(_) => false,
         NodeType::LI64(_) => false,
         NodeType::LList(_) => false,
         NodeType::LString(_) => false,
@@ -2622,7 +2601,7 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
             }
         },
 
-        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LBool(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
+        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
     }
 
     return errors
@@ -2665,7 +2644,6 @@ fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
 fn eval_to_bool(mut context: &mut Context, e: &Expr) -> bool {
 
     match &e.node_type {
-        NodeType::LBool(b_value) => return *b_value,
         NodeType::FCall => return eval_call_to_bool(&mut context, &e),
         NodeType::Identifier(name) => {
             match context.get_bool(name) {
@@ -3607,7 +3585,6 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
         NodeType::Body => {
             return eval_body(&mut context, &e.params);
         },
-        NodeType::LBool(bool_value) => bool_value.to_string(),
         NodeType::LI64(li64) => li64.to_string(),
         NodeType::LString(lstring) => lstring.to_string(),
         NodeType::LList(list_str_) => {
@@ -3716,9 +3693,6 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
-        NodeType::LBool(lbool) => {
-            return lbool.to_string();
-        },
         NodeType::LI64(li64) => {
             return li64.to_string();
         },
@@ -3915,7 +3889,6 @@ fn run_file_or_exit(path: &String, args: Vec<String>) {
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     let args: Vec<String> = env::args().collect();
-
 
     if args.len() > 2 {
         let mut main_args = Vec::new();

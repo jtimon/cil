@@ -37,6 +37,8 @@ xor := func(a: bool, b: bool) returns bool {
 // Note that bool, i64 and String don't have fields because the're the core types
 // think of them as "half-external types" for now
 bool := struct {
+    mut data : i64 = 0
+
     to_str := func(self: bool) returns String {
         if self {
             return "true"
@@ -52,8 +54,18 @@ bool := struct {
         return 0
     }
 
+    from_i64 := func(i: i64) returns bool {
+        b := bool()
+        if gt(i, 0) {
+            b.data = 1
+            return b
+        }
+        return b
+    }
 }
 
+false : bool = bool.from_i64(0)
+true  : bool = bool.from_i64(1)
 
 i64 := struct {
     // mut data : i64 = 0 // self host the data
