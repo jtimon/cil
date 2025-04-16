@@ -1,5 +1,33 @@
 mode lib
 
+// TODO replace the core bool functions with these
+// not := func(a: bool) returns bool {
+//     if a {
+//         return false
+//     }
+//     return true
+// }
+
+// and := func(a: bool, b: bool) returns bool {
+//     if not(a) {
+//         return false
+//     }
+//     if not(b) {
+//         return false
+//     }
+//     return true
+// }
+
+// or := func(a: bool, b: bool) returns bool {
+//     if a {
+//         return true
+//     }
+//     if b {
+//         return true
+//     }
+//     return false
+// }
+
 xor := func(a: bool, b: bool) returns bool {
     // return a.and(not(b)).or(b.and(not(a))) // TODO implement UFCS (Uniform Function Call Syntax) for funccall return values
     // return or(a.and(not(b)), b.and(not(a))) // TODO implement UFCS (Uniform Function Call Syntax) again in self hostinf
@@ -23,12 +51,9 @@ bool := struct {
         }
         return 0
     }
+
 }
 
-// TODO move from bool to Bool?
-Bool := struct {
-//    mut data: bool = 0 // TODO
-}
 
 i64 := struct {
     // mut data : i64 = 0 // self host the data
@@ -51,6 +76,112 @@ i64 := struct {
     }
 }
 
+// TODO move from bool to Bool and get rid of bool core functions before self hosting
+Bool := struct {
+    mut data: i64 = 0 // TODO
+
+    from_str := func(str: String) returns Bool {
+        b := Bool()
+        if str_eq(str, "true") {
+            b.data = 1
+        } else {
+            b.data = 0
+        }
+        return b
+    }
+
+    from_i64 := func(i: i64) returns Bool {
+        b := Bool()
+        // TODO think if we want gt, different from 0 or what in terms of C return conventions compatibility,
+        // IIRC it was gt(0), which makes sense to me, reserving negative values for value errors, but look it up
+        if gt(i, 0) {
+            b.data = 1
+        } else {
+            b.data = 0
+        }
+        return b
+    }
+
+    // TODO get rid of this one once we only have one type of bool
+    from_literal := func(lit_bool: bool) returns Bool {
+        b := Bool()
+        if lit_bool {
+            b.data = 1
+        } else {
+            b.data = 0
+        }
+        return b
+    }
+
+    to_i64 := func(self: Bool) returns i64 {
+        return self.data
+    }
+
+    to_str := func(self: Bool) returns String {
+        if gt(self.data, 0) {
+            return "true"
+        }
+        return "false"
+    }
+
+    new_and := func(a: Bool, b: Bool) returns Bool {
+        result = Bool()
+        if eq(a.data, 0) {
+            return result
+        }
+        if eq(b.data, 0) {
+            return result
+        }
+        result.data = 1 // TODO This should give an error on type checking phase, not eval, result is not mut
+        return c
+    }
+
+    new_or := func(a: Bool, b: Bool) returns Bool {
+        result = Bool()
+        if eq(a.data, 1) {
+            result.data = 1 // TODO This should give an error on type checking phase, not eval, result is not mut
+            return result
+        }
+        if eq(b.data, 1) {
+            result.data = 1
+            return result
+        }
+        result.data = 0
+        return result
+    }
+
+    new_not := func(a: Bool) returns Bool {
+        result = Bool()
+        if eq(b.data, 0) {
+            result.data = 1
+            return c
+        }
+        result.data = 0
+        return result
+    }
+
+    new_xor := func(a: Bool, b: Bool) returns Bool {
+        return new_or(a.new_and(b.new_not()), b.new_and(a.new_not())) // TODO Decide which form you like more after removing 'new_', test both
+        // return a.new_and(b.new_not()).new_or(b.new_and(a.new_not())) // TODO fix parse ERROR: Expected statement, found Dot.
+    }
+}
+
+// TODO I should be able to declare these before declaring Bool, even in files that are imported
+// TODO? change to enum in the future? These serve as literals for bool
+False := Bool.from_i64(0)
+True := Bool.from_i64(1)
+
+Ptr := struct {
+    mut addr: String = "";
+    mut offset: i64 = 0;
+}
+
+Array := struct {
+    mut ptr: Ptr = Ptr();
+    mut count: i64 = 0;
+    mut capacity: i64 = 0;
+}
+
 // TODO move from i64 to I64
 I64 := struct {
     mut data: i64 = 0 // TODO
@@ -60,6 +191,12 @@ String := struct {
     to_int := func(self: String) returns i64 {
         return atoi(self)
     }
+}
+
+// TODO move from String to Str and get rid of string core functions before self hosting
+Str := struct {
+    mut data: Ptr = Ptr()
+    mut len: i64 = 0;
 }
 
 panic2 := proc(msgs: ..String) {
