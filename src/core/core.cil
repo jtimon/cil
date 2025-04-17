@@ -1,6 +1,5 @@
 mode lib
 
-not := ext_func(a: bool) returns bool;
 // TODO variadic arguments should allowed 0 arguments too, unlike in print, println, and, or
 // or  := ext_func(a: bool, args: ..bool) returns bool;
 // or  := ext_func(args: ..bool) returns bool; // TODO move 'or' to std after supporting variadic arguments

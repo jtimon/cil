@@ -2739,11 +2739,6 @@ fn eval_core_func_or(mut context: &mut Context, e: &Expr) -> String {
     truthfulness.to_string()
 }
 
-fn eval_core_func_not(mut context: &mut Context, e: &Expr) -> String {
-    assert!(e.params.len() == 2, "{} ERROR: Core func 'not' only takes 1 argument. This should never happen.", LANG_NAME);
-    (!eval_to_bool(&mut context, &e.get(1))).to_string()
-}
-
 fn eval_core_func_eq(mut context: &mut Context, e: &Expr) -> String {
     assert!(e.params.len() == 3, "{} ERROR: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
     let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
@@ -3037,7 +3032,6 @@ fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_
     return match name {
         "and" => eval_core_func_and(&mut context, &e),
         "or" => eval_core_func_or(&mut context, &e),
-        "not" => eval_core_func_not(&mut context, &e),
         "eq" => eval_core_func_eq(&mut context, &e),
         "str_eq" => eval_core_func_str_eq(&mut context, &e),
         "concat" => eval_core_func_concat(&mut context, &e),
