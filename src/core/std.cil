@@ -48,10 +48,13 @@ bool := struct {
 
 }
 
-not := func(a: bool) returns bool {
+not := proc(a: bool) returns bool {
+    println("Calling not with ", bool.to_str(a))
     if a {
+        println("true, return false")
         return false
     }
+    println("false, return true")
     return true
 }
 
@@ -233,7 +236,8 @@ test := proc(cond: bool, msg: String) {
 }
 
 assert_eq_str := proc(a: String, b: String) {
-    if not(str_eq(a, b)) {
+    println("assert_eq_str ", bool.to_str(str_eq(a, b)))
+    if not(not(str_eq(a, b))) {
         println("assert_eq_str failed: expected '", a, "', found '", b, "'")
         exit(1)
     }

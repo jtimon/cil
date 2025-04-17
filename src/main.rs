@@ -2651,6 +2651,10 @@ fn eval_call_to_bool(mut context: &mut Context, e: &Expr) -> bool {
         e.lang_error("eval", &format!("eval_to_bool(): Function '{}' does not return bool", f_name));
     }
 
+    // if f_name == "not" {
+    //     println!("evaluating not {} {:?}", extra_arg, e);
+    // }
+
     if extra_arg {
         let id_expr_name = get_func_name_in_call(&e);
         let extra_arg_e = Expr::new_clone(NodeType::Identifier(id_expr_name), &e, Vec::new());
