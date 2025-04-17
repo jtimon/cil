@@ -667,6 +667,7 @@ impl Expr {
     }
 }
 
+// TODO import("./src/core/modes.cil") instead
 #[derive(Debug, Clone, PartialEq)]
 struct ModeDef {
     name: String,
@@ -3852,6 +3853,7 @@ fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source:
 
 fn run_file(path: &String, main_args: Vec<String>) -> Result<(), String> {
     let mut context = Context::new(DEFAULT_MODE);
+    // run_file_with_context(true, &mut context, &"src/core/modes.cil".to_string(), Vec::new())?; // TODO first just reat modes, then also replace 'mode_from_name()'
     run_file_with_context(true, &mut context, &"src/core/core.cil".to_string(), Vec::new())?;
     run_file_with_context(true, &mut context, &"src/core/std.cil".to_string(), Vec::new())?;
     run_file_with_context(false, &mut context, &path, main_args)?;

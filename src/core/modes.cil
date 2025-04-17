@@ -1,0 +1,103 @@
+mode pure
+
+ModeDef := struct {
+    name := "pure"
+    allows_proc_decl := false
+    allows_func_print := false
+    allows_base_calls := false
+    allows_base_mut := false
+    allows_base_anything := false
+    needs_main_proc := false
+    needs_safe_calls := false
+}
+
+Pure := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "pure"
+    m.allows_proc_decl = false
+    m.allows_func_print = false
+    m.allows_base_calls = false
+    m.allows_base_mut = false
+    m.allows_base_anything = false
+    m.needs_main_proc = false
+    m.needs_safe_calls = false
+    return m
+}
+
+Pura := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "pura"
+    m.allows_proc_decl = false
+    m.allows_func_print = true
+    m.allows_base_calls = false
+    m.allows_base_mut = false
+    m.allows_base_anything = false
+    m.needs_main_proc = false
+    m.needs_safe_calls = false
+    return m
+}
+
+Lib := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "lib"
+    m.allows_proc_decl = true
+    m.allows_func_print = false
+    m.allows_base_calls = false
+    m.allows_base_mut = false
+    m.allows_base_anything = false
+    m.needs_main_proc = false
+    m.needs_safe_calls = false
+    return m
+}
+
+Script := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "script"
+    m.allows_proc_decl = false
+    m.allows_func_print = false
+    m.allows_base_calls = true
+    m.allows_base_mut = true
+    m.allows_base_anything = true
+    m.needs_main_proc = false
+    m.needs_safe_calls = false
+    return m
+}
+
+SafeScript := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "safe_script"
+    m.allows_proc_decl = false
+    m.allows_func_print = false
+    m.allows_base_calls = true
+    m.allows_base_mut = true
+    m.allows_base_anything = true
+    m.needs_main_proc = false
+    m.needs_safe_calls = true
+    return m
+}
+
+Cli := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "cli"
+    m.allows_proc_decl = true
+    m.allows_func_print = false
+    m.allows_base_calls = false
+    m.allows_base_mut = true
+    m.allows_base_anything = true
+    m.needs_main_proc = true
+    m.needs_safe_calls = false
+    return m
+}
+
+Test := func() returns ModeDef {
+    mut m := ModeDef()
+    m.name = "test"
+    m.allows_proc_decl = true
+    m.allows_func_print = false
+    m.allows_base_calls = true
+    m.allows_base_mut = true
+    m.allows_base_anything = true
+    m.needs_main_proc = false
+    m.needs_safe_calls = false
+    return m
+}
