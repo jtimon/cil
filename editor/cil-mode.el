@@ -71,39 +71,39 @@
 ))
 
 (defun cil-indent-line ()
-  "Indent current line as cil code."
+  "Indent current line as cil code using 4 spaces."
   (interactive)
-  (let ((indent-col 0))
+  (let ((indent 0))
     (save-excursion
       (beginning-of-line)
-      (let ((case-fold-search nil)) ; Enable case sensitivity
-        (cond
-         ((looking-at-p "[ \t]*}")
-          (condition-case nil
-              (progn
-                (backward-up-list 1)
-                (setq indent-col (current-indentation)))
-            (error (setq indent-col 0))))
-         ((looking-at-p "[ \t]*case\\b")
-          (condition-case nil
-              (progn
-                (backward-up-list 1)
-                (re-search-backward "switch\\b" nil t)
-                (setq indent-col (current-indentation)))
-            (error (setq indent-col 0))))
-         (t
-          (condition-case nil
-              (while t
-                (backward-up-list 1)
-                (when (looking-at "{")
-                  (setq indent-col (+ indent-col 4))))
-              (error nil))))))
-    (indent-line-to indent-col)
-    ;; Ensure that the line is indented with spaces
-    (when (and (not (zerop indent-col)) (not (looking-at-p "[ \t]*$")))
-      (let ((spaces (make-string 4 ?\s))) ; Create a string of 4 spaces
-        (delete-region (line-beginning-position) (point))
-        (insert spaces)))))
+      (skip-chars-forward " \t")
+      (cond
+       ;; Case statements: align with parent switch
+       ((looking-at-p "\\<case\\>")
+        (condition-case nil
+            (progn
+              (backward-up-list 1)
+              (when (looking-back "\\<switch\\s-+[^}]*{" nil)
+                (setq indent (current-indentation))))
+          (error (setq indent 0))))
+       ;; Closing brace: align with parent block
+       ((looking-at-p "[ \t]*}")
+        (condition-case nil
+            (progn
+              (backward-up-list 1)
+              (setq indent (current-indentation)))
+          (error (setq indent 0))))
+       ;; Other lines: indent based on open blocks or parentheses
+       (t
+        (condition-case nil
+            (progn
+              (backward-up-list 1)
+              (setq indent (+ (current-indentation) 4)))
+          (error (setq indent 0))))))
+    ;; Apply indentation
+    (beginning-of-line)
+    (delete-horizontal-space)
+    (indent-to indent)))
 
 (define-derived-mode cil-mode prog-mode "cil"
   "Major Mode for editing cil source code."
