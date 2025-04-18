@@ -82,10 +82,15 @@ inferred_str := "string" // 'inferred_str' (font-lock-constant-face in emacs)
 spaced_const : = 60 // 'spaced_const' (no highlight, WIP)
 typed_const : i64 = 70 // 'typed_const' (no highlight, WIP), 'i64' (font-lock-type-face in emacs)
 
+aaa := 0
+
 // Case statement (should not be constant)
 switch x { // 'switch' (font-lock-keyword-face in emacs)
 case 4: // 'case' (font-lock-keyword-face in emacs), 'check_value' (no highlight, should not be font-lock-constant-face in emacs)
     x = 100 // 'x' in assigment must be variable (font-lock-variable-name-face in emacs)
+case aaa:
 case:
     x = 69
 }
+
+bbb := 0

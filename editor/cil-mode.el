@@ -58,6 +58,10 @@
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:=\\s-*\\(func\\|proc\\|macro\\|ext_func\\|ext_proc\\)" 1 font-lock-function-name-face)
     ;; Mutable variables and arguments (anything after 'mut')
     ("\\<mut\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-variable-name-face)
+
+    ;; Case identifiers: identifiers between 'case' and ':' (e.g., 'field' in 'case my_const_struct_instance.field:'), treated as regular code
+    ("\\<case\\s-+\\(?:[a-zA-Z_][a-zA-Z0-9_]*\\.\\)*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 default)
+
     ;; Constants: identifiers before ':' (in declarations or signatures), overridden by 'mut' rule
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 font-lock-constant-face)
     ;; TODO Enum values as constants
