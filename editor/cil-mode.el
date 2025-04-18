@@ -59,12 +59,14 @@
     ;; Mutable variables and arguments (anything after 'mut')
     ("\\<mut\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-variable-name-face)
 
-    ;; Case identifiers: identifiers between 'case' and ':' (e.g., 'field' in 'case my_const_struct_instance.field:'), treated as regular code
+    ;; Case identifiers: identifiers between 'case' and ':' (e.g., 'field' in 'case my_struct.field:'), treated as regular code
     ("\\<case\\s-+\\(?:[a-zA-Z_][a-zA-Z0-9_]*\\.\\)*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 default)
 
     ;; Constants: identifiers before ':' (in declarations or signatures), overridden by 'mut' rule
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 font-lock-constant-face)
-    ;; TODO Enum values as constants
+
+    ;; WIP Enum variants: identifiers in enum blocks (e.g., 'Variant1', 'Variant2' in 'MyEnum := enum { Variant1, Variant2 }')
+    ;; ("\\<enum\\s-*{\\(?:[^}]*\\)?\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-constant-face)
 ))
 
 (defun cil-indent-line ()
