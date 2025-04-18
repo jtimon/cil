@@ -58,15 +58,8 @@
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:=\\s-*\\(func\\|proc\\|macro\\|ext_func\\|ext_proc\\)" 1 font-lock-function-name-face)
     ;; Mutable variables and arguments (anything after 'mut')
     ("\\<mut\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-variable-name-face)
-    ;; Constant arguments (no 'mut', in function signatures)
-    ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:\\s-*[a-zA-Z_][a-zA-Z0-9_]*\\s-*[,)]" 1 font-lock-constant-face)
-    ;; Inferred constants (no 'mut', with ':=')
-    ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:=\\s-*" 1 font-lock-constant-face)
-    ;; WIP Inferred constants (no 'mut', with ': =', ie with spaces inbetween the ':' and the '=')
-    ;; ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*: *\\s*=\\s-*" 1 font-lock-constant-face)
-    ;; ("\\<\\(?!mut\\s-+\\)\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:\\s*=\\s-*[0-9]+\\|\"[^\"]*\"\\|'[^']*'\\|true\\|false" 1 font-lock-constant-face)
-    ;; WIP Non inferred constants (no 'mut', with : type '=')
-    ;; ("\\<\\(?!mut\\s-+\\)\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:\\s-*[a-zA-Z_][a-zA-Z0-9_]*\\s-*=\\s-*[0-9]+\\|\"[^\"]*\"\\|'[^']*'\\|true\\|false" 1 font-lock-constant-face)
+    ;; Constants: identifiers before ':' (in declarations or signatures), overridden by 'mut' rule
+    ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 font-lock-constant-face)
     ;; TODO Enum values as constants
 ))
 
