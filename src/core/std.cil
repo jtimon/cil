@@ -39,6 +39,8 @@ and := func(arg_and_a: bool, arg_and_b: bool) returns bool {
 // Note that bool, i64 and String don't have fields because the're the core types
 // think of them as "half-external types" for now
 bool := struct {
+    mut data := 0
+
     to_str := func(self: bool) returns String {
         if self {
             return "true"
@@ -48,6 +50,7 @@ bool := struct {
 
     // necessary for branchless arithmetics (but it must be implemented as a cast for it to make sense that way)
     to_int := func(self: bool) returns i64 {
+        // TODO move to directly return self.data instead
         if self {
             return 1
         }
