@@ -51,22 +51,25 @@
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:=\\s-*\\(enum\\|struct\\)" 1 font-lock-type-face)
     ;; Assignments (mutable variables)
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*=\\s-*[^:=]" 1 font-lock-variable-name-face)
-    ;; Types in declarations, signatures, and enum variants
-    ("\\<\\(mut\\s-+\\|case\\s-+\\)?\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 3 font-lock-type-face)
-    ("\\<returns\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-type-face)
     ;; Function and procedure names
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:=\\s-*\\(func\\|proc\\|macro\\|ext_func\\|ext_proc\\)" 1 font-lock-function-name-face)
     ;; Mutable variables and arguments (anything after 'mut')
     ("\\<mut\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-variable-name-face)
 
+    ;; WIP Enum variants: identifiers in enum blocks (e.g., 'Variant1', 'Variant2' in 'MyEnum := enum { Variant1, Variant2 }')
+    ("\\<enum\\s-*{\\(?:[^}]*\\)?\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-constant-face)
+
+    ;; WIP: switch cases still cause some issues
     ;; Case identifiers: identifiers between 'case' and ':' (e.g., 'field' in 'case my_struct.field:'), treated as regular code
     ("\\<case\\s-+\\(?:[a-zA-Z_][a-zA-Z0-9_]*\\.\\)*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 default)
 
     ;; Constants: identifiers before ':' (in declarations or signatures), overridden by 'mut' rule
     ("\\<\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:" 1 font-lock-constant-face)
 
-    ;; WIP Enum variants: identifiers in enum blocks (e.g., 'Variant1', 'Variant2' in 'MyEnum := enum { Variant1, Variant2 }')
-    ;; ("\\<enum\\s-*{\\(?:[^}]*\\)?\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-constant-face)
+    ;; Types in declarations, signatures, and enum variants
+    ("\\<\\(mut\\s-+\\|case\\s-+\\)?\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*:\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 3 font-lock-type-face)
+    ("\\<returns\\s-+\\([a-zA-Z_][a-zA-Z0-9_]*\\)" 1 font-lock-type-face)
+
 ))
 
 (defun cil-indent-line ()
