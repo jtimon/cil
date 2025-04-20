@@ -3016,7 +3016,8 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
             Some(_after_dot) => _after_dot,
             None => {
                 if name == "bool" {
-                    return e.todo_error("eval", &format!("Cannot instantiate '{}'. Special case for bool not implemented yet.", name))
+                    return "false".to_string()
+                    // return e.todo_error("eval", &format!("Cannot instantiate '{}'. Special case for bool not implemented yet.", name))
                 }
                 return e.todo_error("eval", &format!("Cannot instantiate '{}'. Not implemented yet.", name))
             },
