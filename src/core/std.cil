@@ -36,9 +36,10 @@ and := func(arg_and_a: bool, arg_and_b: bool) returns bool {
     return true
 }
 
-// Note that bool, i64 and String don't have fields because the're the core types
-// think of them as "half-external types" for now
+// TODO Rename bool to Bool, let's have all types start with upper case for consistency
 bool := struct {
+    mut data: bool = 0
+
     to_str := func(self: bool) returns String {
         if self {
             return "true"
@@ -53,13 +54,23 @@ bool := struct {
         }
         return 0
     }
+
+    // Note: there are no bool literals anymore, true and false are defined based on this
+    from_int := func(i: i64) returns bool {
+        self := bool()
+        if gt(0) { // Was not the C convention to treat negative numbers as false to check for errors?
+            self.data = 1
+        }
+        return self
+    }
 }
 
-// TODO move from bool to Bool?
-Bool := struct {
-//    mut data: bool = 0 // TODO
-}
+// NOTE: Consider Making Bool just an enum like in rock
+false := bool.from_int(0)
+true  := bool.from_int(1)
 
+// Note that i64 and String don't have fields because the're the core types
+// think of them as "half-external types" for now
 i64 := struct {
     // mut data : i64 = 0 // self host the data
 

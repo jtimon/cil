@@ -62,8 +62,6 @@ enum TokenType {
     // Reserved words:
     Mut,
 
-    // bool
-    True, False,
     // type definition
     Struct, Enum,
     // function definition
@@ -148,14 +146,10 @@ fn is_id_start(source: &String, pos: usize) -> bool {
 
 fn scan_reserved_words(identifier: &str) -> TokenType {
     match identifier {
-        "mode" => TokenType::Mode,
+        "mode" => TokenType::Mode, // needed at the top of every file
 
         // declaration/arg modifiers
         "mut" => TokenType::Mut,
-
-        // bool literals
-        "true" => TokenType::True,
-        "false" => TokenType::False,
 
         // core data types
         "enum" => TokenType::Enum,
@@ -469,8 +463,6 @@ fn is_literal(t: &Token) -> bool {
     return match t.token_type {
         TokenType::String => true,
         TokenType::Number => true,
-        TokenType::True => true,
-        TokenType::False => true,
         _ => false,
     }
 }
@@ -581,7 +573,6 @@ enum NodeType {
     LList(String),
     LString(String),
     LI64(i64),
-    LBool(bool),
     FCall,
     Identifier(String),
     Declaration(Declaration),
@@ -773,8 +764,6 @@ fn parse_literal(t: &Token, current: &mut usize) -> Result<Expr, String> {
     let node_type = match t.token_type {
         TokenType::String => NodeType::LString(t.token_str.clone()),
         TokenType::Number => NodeType::LI64(t.token_str.parse::<i64>().unwrap()),
-        TokenType::True => NodeType::LBool(true),
-        TokenType::False => NodeType::LBool(false),
         _ => {
             return Err(format!("{}:{}: {}  ERROR: Trying to parse a token that's not a literal as a literal, found {:?}.",
                                t.line, t.col, LANG_NAME, t.token_type));
@@ -1937,7 +1926,6 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
 
 fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
     match &e.node_type {
-        NodeType::LBool(_) => Ok(ValueType::TCustom("bool".to_string())),
         NodeType::LI64(_) => Ok(ValueType::TI64),
         NodeType::LString(_) => Ok(ValueType::TString),
         NodeType::LList(_) => Ok(ValueType::TList),
@@ -2157,7 +2145,6 @@ fn is_expr_calling_procs(context: &Context, e: &Expr) -> bool {
         NodeType::EnumDef(_) => {
             false
         },
-        NodeType::LBool(_) => false,
         NodeType::LI64(_) => false,
         NodeType::LList(_) => false,
         NodeType::LString(_) => false,
@@ -2644,7 +2631,7 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
             }
         },
 
-        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LBool(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
+        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
     }
 
     return errors
@@ -3028,6 +3015,9 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
         let after_dot = match id_expr.params.get(0) {
             Some(_after_dot) => _after_dot,
             None => {
+                if name == "bool" {
+                    return e.todo_error("eval", &format!("Cannot instantiate '{}'. Special case for bool not implemented yet.", name))
+                }
                 return e.todo_error("eval", &format!("Cannot instantiate '{}'. Not implemented yet.", name))
             },
         };
@@ -3552,7 +3542,6 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
         NodeType::Body => {
             return eval_body(&mut context, &e.params);
         },
-        NodeType::LBool(bool_value) => bool_value.to_string(),
         NodeType::LI64(li64) => li64.to_string(),
         NodeType::LString(lstring) => lstring.to_string(),
         NodeType::LList(list_str_) => {
@@ -3661,9 +3650,6 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
-        NodeType::LBool(lbool) => {
-            return lbool.to_string();
-        },
         NodeType::LI64(li64) => {
             return li64.to_string();
         },
