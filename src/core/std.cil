@@ -57,7 +57,7 @@ bool := struct {
 
     // Note: there are no bool literals anymore, true and false are defined based on this
     from_int := func(i: i64) returns bool {
-        self := bool()
+        mut self := bool()
         if gt(0) { // Was not the C convention to treat negative numbers as false to check for errors?
             self.data = 1
         }

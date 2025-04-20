@@ -18,8 +18,8 @@ MyStruct := struct {
     }
 
     to_string := proc(self: MyStruct) returns String {
-	todo("implement MyStruct.to_string()")
-	return ""
+        todo("implement MyStruct.to_string()")
+        return ""
     }
 }
 

@@ -2,7 +2,8 @@
 
 all: rscil cil
 rscil:
-	cargo run src/tests.cil
+	# cargo run src/tests.cil
+	cargo run src/example_self_hosted.cil
 # TODO run src/cil.cil with cil.cil
 # TODO run src/tests.cil with cil.cil
 cil:

@@ -2,9 +2,6 @@ mode test
 
 // runfile("src/repl.cil") // REM don't run this from the tests unless for debug
 
-println("Self hosted tests:")
-println("")
-
 println("Some versions of _hello world_ in different basic modes")
 println("")
 
