@@ -40,8 +40,32 @@ const SKIP_AST: bool = true;
 
 #[derive(Debug, Clone, PartialEq)]
 enum TokenType {
-    // basic
+    // parsing convenience
     Eof,
+
+    // Special in this language
+    Mode,
+
+    // Literals.
+    Identifier, String, Number,
+
+    // Reserved words that rust got right but not quite
+    Mut,
+
+    // type definition
+    Struct, Enum,
+
+    // function definition
+    Func, Proc, Macro,
+    FuncExt, ProcExt,
+    Returns, Throws,
+
+    // flow control
+    If, Else,
+    While, For, In,
+    Switch, Case,
+    Return, Throw,
+    Try, Catch,
 
     // Single-character tokens.
     Minus, Plus, Slash, Star,
@@ -56,32 +80,12 @@ enum TokenType {
     Lesser, LesserEqual,
     Semicolon, DoubleSemicolon,
 
-    // Literals.
-    Identifier, String, Number,
-
-    // Reserved words:
-    Mut,
-
-    // type definition
-    Struct, Enum,
-    // function definition
-    Returns, Throws,
-    // flow control
-    If, Else,
-    While, For, In,
-    Match, Switch, Default,
-    Return, Throw,
-    Try, Catch,
-
-    // Special in this language:
-    Mode,
-    Func, Proc, Macro,
-    FuncExt, ProcExt,
+    // Errors too close to other languages for a variable or constant, confusion
+    Const, Var, Fn, Function, Procedure, Int, Extern,
+    Default, // 'default:' could be admitted instead of an empty 'case:'
+    Match, // like switch but only for assigning to variables, like in rust, but switch is  just a more convenient elif, should match yield instead of return, more similar to corutines?
 
     // Errors
-    Const, Var,
-    Fn,
-    Case,
     Invalid,
     UnterminatedString,
     // UnterminatedComment, // TODO do nesting comments like jai and odin, shoulnd't be that hard. ideally in the lexer itself
@@ -184,17 +188,25 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
         "catch" => TokenType::Catch,
         "try" => TokenType::Try, // TODO don't allow it to open contexts, just mandatory 'try:' in any line that may throw
         // or should 'try:' be optional?
+        // nah, every time you may through, that line must start with 'try'
+        // next, anything that is thrown by 'throw' and or 'try:' lines, must be 'catch' or declared in the 'throws' section after 'returns'
 
         // Reserved forbidden/illegal words (intentionally unsupported reserved words)
-        // TODO intentionally unsupport more reserved words
-        // TODO nicer messages for forbidden words
-        "fn" => TokenType::Fn,
-        "function" => TokenType::Invalid,
-        "method" => TokenType::Invalid,
-        "global" => TokenType::Invalid, // just use mut declaration in the root of the file, but they're not allowed in all modes
+
         // const/vars are the most abstract types, you can't even explicitly declare them
         "const" => TokenType::Const,
         "var" => TokenType::Var,
+
+        // reserved wrong words to try to declare functions
+        "fn" => TokenType::Fn,
+        "function" => TokenType::Function,
+        "procedure" => TokenType::Procedure,
+
+        // TODO intentionally unsupport more reserved words
+        // TODO nicer messages for forbidden words
+        // "method" => TokenType::Method, // TODO?
+        // just use mut declaration in the root of the file, but they're not allowed in all modes?
+        // "global" => TokenType::Global, // TODO?
 
         // Do we really need const fields static other than static? (ie can be different per instance, but not modified afterwards)
         // The answer is probably yet, but perhaps static is not the right answer
@@ -205,6 +217,12 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
         _ => TokenType::Identifier,
     }
 }
+
+//** TODO
+//   TODO documentation: TODO not documented, 'help' function not implemented yet.
+//   try: help(any_typical_python_class) /** say 'bool' in ipython **/
+//*/
+// help := (something: Anything)
 
 fn scan_push_token(tokens: &mut Vec<Token>, token_type: TokenType, token_str: &str, line: usize, col: usize) {
     tokens.push(Token{token_type: token_type, token_str: token_str.to_string(), line: line, col: col});
@@ -3648,6 +3666,9 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
     return ast_str;
 }
 
+// TODO add a Graphviz codegen and run it to generate svg
+// TODO replace this with an elisp codegen
+// DEPRECATED: to_ast_str() is deprecated
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
