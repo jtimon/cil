@@ -1,0 +1,7 @@
+mode test
+
+test_mode_test := proc() {
+    test(true, "mode 'test' HAS NOT been tested")
+    println("mode 'test' HAS been tested")
+}
+test_mode_test()
