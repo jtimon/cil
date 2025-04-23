@@ -1,5 +1,7 @@
 mode test
 
+import("src/core/modes/test.cil") // TODO FIX shouldn't be in mode test
+
 hello := func() returns String {
     return "Hello World!"
 }

@@ -1,5 +1,7 @@
 mode test
 
+import("src/core/modes/test.cil") // TODO FIX shouldn't be in mode test
+
 // arithmetics:
 
 c2      := 2

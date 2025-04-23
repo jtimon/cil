@@ -1,5 +1,7 @@
 mode test
 
+import("src/core/modes/test.cil") // TODO FIX shouldn't be in mode test
+
 // Function tests:
 
 test(I64.eq(add_two(5), 7), "add_two(5) = 7")

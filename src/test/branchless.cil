@@ -1,5 +1,7 @@
 mode test
 
+import("src/core/modes/test.cil") // TODO FIX shouldn't be in mode test
+
 // branchless conditions:
 
 // Bool.to_int is required for branchless arithmetics, branchless is important for some compiled use cases like cryptography
