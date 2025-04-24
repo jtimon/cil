@@ -3911,6 +3911,10 @@ fn run_file(path: &String, main_args: Vec<String>) -> Result<(), String> {
 
     // Collect imports as owned Strings
     let imports: Vec<String> = context.mode.free_imports.clone();
+    println!("path: {}, mode name: {}", path, context.mode.name);
+    if context.mode.name != "lib" {
+        println!("mode name: {}", context.mode.name);
+    }
     for imp in imports {
         println!("Trying to import '{}' for free from '{}'", imp, &path);
         run_file_with_context(true, &mut context, &format!("src/core/{}.cil", imp), Vec::new())?;
