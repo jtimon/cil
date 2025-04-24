@@ -664,14 +664,15 @@ struct ModeDef {
     allows_base_calls: bool,
     allows_base_anything: bool,
     needs_main_proc: bool,
+    free_imports: Vec<String>,
 }
 
 fn can_be_imported(mode: &ModeDef) -> bool {
     return !(
         mode.needs_main_proc || // TODO think harder, why not?
-        mode.allows_base_mut ||
-        mode.allows_base_calls ||
-        mode.allows_base_anything
+            mode.allows_base_mut ||
+            mode.allows_base_calls ||
+            mode.allows_base_anything
     );
 }
 
@@ -683,49 +684,56 @@ fn mode_from_name(mode_name: &str) -> Result<ModeDef, String> {
                     allows_base_mut: false,
                     allows_base_anything: false,
                     needs_main_proc: false,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "external" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: false,
                     allows_base_mut: false,
                     allows_base_anything: false,
                     needs_main_proc: false,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "pure" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: false,
                     allows_base_mut: false,
                     allows_base_anything: false,
                     needs_main_proc: false,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "script" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: true,
                     allows_base_mut: true,
                     allows_base_anything: true,
                     needs_main_proc: false,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "safe_script" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: true,
                     allows_base_mut: true,
                     allows_base_anything: true,
                     needs_main_proc: false,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "cli" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: false,
                     allows_base_mut: true,
                     allows_base_anything: false,
                     needs_main_proc: true,
-        }),
+                    free_imports: Vec::new(),
+            }),
         "test" => Ok(
             ModeDef{name: mode_name.to_string(),
                     allows_base_calls: true,
                     allows_base_mut: false,
                     allows_base_anything: false,
                     needs_main_proc: false,
-        }),
+                    free_imports: ["test".to_string()].to_vec(),
+            }),
 
         _  => return Err(format!("0:0: {} interpreter implementation doesn't support mode '{}'", LANG_NAME, mode_name)),
     };
@@ -2070,7 +2078,7 @@ fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
                                     let extra_member_str = match &e.get(1).node_type {
                                         NodeType::Identifier(member_name) => member_name,
                                         node_type => return Err(e.error("type", &format!("identifiers can only contain identifiers, found '{:?}'",
-                                                                        node_type))),
+                                                                                         node_type))),
                                     };
                                     return Err(e.error("type", &format!("Suggestion: remove '.{}' after '{}.{}'\nExplanation: enum value '{}.{}' cannot have members",
                                                                         extra_member_str, name, member_str, name, member_str)));
@@ -2103,7 +2111,7 @@ fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
                 },
                 _ => {
                     return Err(e.error("type", &format!("'{}' of type '{}' can't have members, '{}' is not a member",
-                                       name, value_type_to_str(&symbol_info.value_type), member_str)))
+                                                        name, value_type_to_str(&symbol_info.value_type), member_str)))
                 },
             }
         },
@@ -2126,7 +2134,7 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
             }
         },
         NodeType::Declaration(decl) => {
-                    if context.funcs.contains_key(&decl.name) || context.symbols.contains_key(&decl.name) {
+            if context.funcs.contains_key(&decl.name) || context.symbols.contains_key(&decl.name) {
                 errors.push(format!("{}:{}: compiler ERROR: '{}' already declared.", e.line, e.col, decl.name));
             }
             assert!(e.params.len() == 1, "{} ERROR: in init_context, while declaring {}, declarations must take exactly one value.", LANG_NAME, decl.name);
@@ -2195,7 +2203,7 @@ fn init_context(context: &mut Context, e: &Expr) -> Vec<String> {
         }
         _ => {
             if !context.mode.allows_base_anything {
-                        if context.mode.allows_base_calls {
+                if context.mode.allows_base_calls {
                     errors.push(format!("{}:{}: mode '{}' allows only declarations and calls in the root context, found {:?}.",
                                         e.line, e.col, context.mode.name, e.node_type));
                 } else {
@@ -2503,7 +2511,7 @@ fn check_fcall(context: &Context, e: &Expr) -> Vec<String> {
         if expected_type != &found_type {
             if expected_type == &str_to_value_type(INFER_TYPE) {
                 errors.push(e.error("type", &format!("calling func/proc '{}' declared arg {} without type, but type inference in args is not supported yet.\n Suggestion: the arg should be '{} : {},' instead of just '{},' Found type: {:?}",
-                                    &f_name, arg.name, arg.name, value_type_to_str(&found_type), arg.name, value_type_to_str(&expected_type))));
+                                                     &f_name, arg.name, arg.name, value_type_to_str(&found_type), arg.name, value_type_to_str(&expected_type))));
             } else {
                 errors.push(e.error("type", &format!("calling function '{}' expects '{}' for arg '{}', but '{}' was provided.",
                                                      &f_name, value_type_to_str(expected_type), arg.name, value_type_to_str(&found_type))));
@@ -2920,7 +2928,7 @@ fn eval_core_exit(e: &Expr) -> String {
         },
         node_type => {
             return e.lang_error("eval", &format!("calling core proc exit, but found {:?} instead of literal i64 exit code.",
-                   node_type));
+                                                 node_type));
         },
     };
     std::process::exit(exit_code as i32);
@@ -3270,11 +3278,11 @@ fn eval_declaration(declaration: &Declaration, mut context: &mut Context, e: &Ex
                                                                          &declaration.name, &member_decl.name))
                                 },
                                 ValueType::TList | ValueType::TEnumDef | ValueType::TStructDef | ValueType::TMulti(_) => {
-                                        return e.todo_error("eval", &format!("Cannot declare '{}.{}' of type '{}'",
-                                                                             &declaration.name,
-                                                                             &member_decl.name,
-                                                                             value_type_to_str(&member_decl.value_type)))
-                                    },
+                                    return e.todo_error("eval", &format!("Cannot declare '{}.{}' of type '{}'",
+                                                                         &declaration.name,
+                                                                         &member_decl.name,
+                                                                         value_type_to_str(&member_decl.value_type)))
+                                },
 
                             }
 
@@ -3900,16 +3908,16 @@ fn run_file(path: &String, main_args: Vec<String>) -> Result<(), String> {
     let mut context = Context::new(DEFAULT_MODE);
     run_file_with_context(true, &mut context, &"src/core/core.cil".to_string(), Vec::new())?;
     run_file_with_context(true, &mut context, &"src/core/std.cil".to_string(), Vec::new())?;
-    println!("run_file: mode: '{}', is test? '{}'", context.mode.name, context.mode.name == "test");
 
-    println!("AAAAAAA: not test name: '{}'", context.mode.name);
-    if context.mode.name == "test" {
-        run_file_with_context(true, &mut context, &"src/core/modes/test.cil".to_string(), Vec::new())?;
-    } else {
-        println!("not test name: '{}'", context.mode.name)
+    // Collect imports as owned Strings
+    let imports: Vec<String> = context.mode.free_imports.iter().cloned().collect();
+
+    for imp in imports {
+        run_file_with_context(true, &mut context, &format!("src/core/{}.cil", imp), Vec::new())?;
     }
+
     run_file_with_context(false, &mut context, &path, main_args)?;
-    return Ok(())
+    Ok(())
 }
 
 fn run_file_with_context(is_import: bool, mut context: &mut Context, path: &String, main_args: Vec<String>) -> Result<(), String> {
