@@ -3910,9 +3910,9 @@ fn run_file(path: &String, main_args: Vec<String>) -> Result<(), String> {
     run_file_with_context(true, &mut context, &"src/core/std.cil".to_string(), Vec::new())?;
 
     // Collect imports as owned Strings
-    let imports: Vec<String> = context.mode.free_imports.iter().cloned().collect();
-
+    let imports: Vec<String> = context.mode.free_imports.clone();
     for imp in imports {
+        println!("Trying to import '{}' for free from '{}'", imp, &path);
         run_file_with_context(true, &mut context, &format!("src/core/{}.cil", imp), Vec::new())?;
     }
 
