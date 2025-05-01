@@ -1,0 +1,117 @@
+* Array and Struct Literals Across Languages
+
+** CIL
+#+begin_src cil
+// Array literal
+start_fib: [2]I64 = [1, 1]
+
+// Struct definition and literal
+Vec2 := struct { x: I64, y: I64 }
+v: Vec2 = Vec2{ x: 1, y: 2 }
+#+end_src
+
+** Porth
+#+begin_src porth
+// Stack-based, no arrays or structs as language features
+// Uses stack manipulation instead
+#+end_src
+
+** Python
+#+begin_src python
+# Array literal
+start_fib = [1, 1]
+
+# Struct (dict) literal
+v = {'x': 1, 'y': 2}
+#+end_src
+
+** Rust
+#+begin_src rust
+// Array literal
+let start_fib = [1, 1];
+
+// Struct definition and literal
+struct Vec2 { x: i64, y: i64 }
+let v = Vec2 { x: 1, y: 2 };
+#+end_src
+
+** D
+#+begin_src d
+// Array literal
+auto start_fib = [1, 1];
+
+// Struct definition and literal
+struct Vec2 { long x; long y; }
+auto v = Vec2(x: 1, y: 2);
+#+end_src
+
+** Haskell
+#+begin_src haskell
+-- Array literal
+start_fib = [1, 1]
+
+-- Struct definition and literal
+data Vec2 = Vec2 { x :: Int, y :: Int }
+v = Vec2 { x = 1, y = 2 }
+#+end_src
+
+** Common Lisp
+#+begin_src lisp
+;; Array literal
+(setf start-fib '(1 1))
+
+;; Struct definition and literal
+(defstruct vec2 x y)
+(make-vec2 :x 1 :y 2)
+#+end_src
+
+** Elisp
+#+begin_src elisp
+;; Array literal
+(setq start-fib [1 1])
+
+;; Struct definition and literal
+(cl-defstruct vec2 x y)
+(make-vec2 :x 1 :y 2)
+#+end_src
+
+** Lua
+#+begin_src lua
+-- Array literal
+start_fib = {1, 1}
+
+-- Struct (table) literal
+v = {x = 1, y = 2}
+#+end_src
+
+** Odin
+#+begin_src odin
+// Array literal
+start_fib := [2]i64{1, 1}
+
+// Struct definition and literal
+Vec2 :: struct {x: i64, y: i64}
+v := Vec2{ x = 1, y = 2 }
+#+end_src
+
+** Jai
+#+begin_src jai
+// Array literal
+start_fib: [2]s64 = {1, 1}
+
+// Struct definition and literal
+struct Vec2 { x: s64; y: s64; }
+v: Vec2 = .{ .x = 1, .y = 2 }
+#+end_src
+
+** Mojo
+#+begin_src python
+# Array literal
+start_fib = [1, 1]
+
+# Struct definition and literal
+struct Vec2:
+    x: Int
+    y: Int
+v = Vec2(x=1, y=2)
+#+end_src
