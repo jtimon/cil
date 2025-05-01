@@ -1,117 +1,29 @@
-* Array and Struct Literals Across Languages
+* Array vs Struct Literals Across Languages
 
-** CIL
-#+begin_src cil
-// Array literal
-start_fib: [2]I64 = [1, 1]
+| Language | Array Literal Example             | Struct Definition & Literal Example          |
+|----------+-----------------------------------+----------------------------------------------|
+| CIL      | start_fib: [3]I64 = [1, 1, 2]      | Vec2 := struct { x: I64; y: I64 } \n v: Vec2 = Vec2{ x: 1, y: 2 } |
+| Porth    | (not applicable, stack-based)     | (Porth doesn't have structs)                |
+| Python   | start_fib = [1, 1, 2]              | v = {'x': 1, 'y': 2}                          |
+| Rust     | let start_fib = [1, 1, 2];         | let v = Vec2 { x: 1, y: 2 };                 |
+| D        | auto start_fib = [1, 1, 2];        | auto v = Vec2(x: 1, y: 2);                   |
+| Haskell  | start_fib = [1, 1, 2]              | v = Vec2 { x = 1, y = 2 }                    |
+| Lisp     | (setf start-fib '(1 1 2))          | (defstruct vec2 x y) \n (make-vec2 :x 1 :y 2) |
+| Elisp    | (setq start-fib [1 1 2])           | (defstruct vec2 x y) \n (make-vec2 :x 1 :y 2) |
+| Lua      | start_fib = {1, 1, 2}              | v = {x = 1, y = 2}                            |
+| Odin     | start_fib := [3]i64{1, 1, 2}       | v := Vec2{ x = 1, y = 2 }                    |
+| Jai      | start_fib: [3]s64 = {1, 1, 2}      | v: Vec2 = .{ .x = 1, .y = 2 }                |
+| Mojo     | start_fib = [1, 1, 2]              | v = Vec2(x=1, y=2)                           |
 
-// Struct definition and literal
-Vec2 := struct { x: I64, y: I64 }
-v: Vec2 = Vec2{ x: 1, y: 2 }
-#+end_src
+* Notes:
+- CIL intends to use square brackets for array literals (`[1, 1, 2]`) and braces for struct literals (`Vec2{ x: 1, y: 2 }`).
+- Odin and Jai use braces for both arrays and structs but distinguish structs using field names (with dot `.` in Jai).
+- Python, Lua use dictionaries/tables for structs (which are dynamic maps).
+- Lisp and Elisp define structs explicitly but use keyword args in `make-struct`.
+- D's syntax is close to named parameters even for struct literals.
+- Rust enforces explicit field names in struct literals, while arrays always use brackets.
 
-** Porth
-#+begin_src porth
-// Stack-based, no arrays or structs as language features
-// Uses stack manipulation instead
-#+end_src
-
-** Python
-#+begin_src python
-# Array literal
-start_fib = [1, 1]
-
-# Struct (dict) literal
-v = {'x': 1, 'y': 2}
-#+end_src
-
-** Rust
-#+begin_src rust
-// Array literal
-let start_fib = [1, 1];
-
-// Struct definition and literal
-struct Vec2 { x: i64, y: i64 }
-let v = Vec2 { x: 1, y: 2 };
-#+end_src
-
-** D
-#+begin_src d
-// Array literal
-auto start_fib = [1, 1];
-
-// Struct definition and literal
-struct Vec2 { long x; long y; }
-auto v = Vec2(x: 1, y: 2);
-#+end_src
-
-** Haskell
-#+begin_src haskell
--- Array literal
-start_fib = [1, 1]
-
--- Struct definition and literal
-data Vec2 = Vec2 { x :: Int, y :: Int }
-v = Vec2 { x = 1, y = 2 }
-#+end_src
-
-** Common Lisp
-#+begin_src lisp
-;; Array literal
-(setf start-fib '(1 1))
-
-;; Struct definition and literal
-(defstruct vec2 x y)
-(make-vec2 :x 1 :y 2)
-#+end_src
-
-** Elisp
-#+begin_src elisp
-;; Array literal
-(setq start-fib [1 1])
-
-;; Struct definition and literal
-(cl-defstruct vec2 x y)
-(make-vec2 :x 1 :y 2)
-#+end_src
-
-** Lua
-#+begin_src lua
--- Array literal
-start_fib = {1, 1}
-
--- Struct (table) literal
-v = {x = 1, y = 2}
-#+end_src
-
-** Odin
-#+begin_src odin
-// Array literal
-start_fib := [2]i64{1, 1}
-
-// Struct definition and literal
-Vec2 :: struct {x: i64, y: i64}
-v := Vec2{ x = 1, y = 2 }
-#+end_src
-
-** Jai
-#+begin_src jai
-// Array literal
-start_fib: [2]s64 = {1, 1}
-
-// Struct definition and literal
-struct Vec2 { x: s64; y: s64; }
-v: Vec2 = .{ .x = 1, .y = 2 }
-#+end_src
-
-** Mojo
-#+begin_src python
-# Array literal
-start_fib = [1, 1]
-
-# Struct definition and literal
-struct Vec2:
-    x: Int
-    y: Int
-v = Vec2(x=1, y=2)
-#+end_src
+* Observations:
+- CIL's plan resembles Rust but drops the confusing dot notation of Jai.
+- Lua and Python blur the line between structs and dynamic maps.
+- Lisp variants (Common Lisp, Elisp) use keyword initialization, similar to D and Haskell.
