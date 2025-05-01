@@ -14,7 +14,6 @@ const LANG_NAME: &str = "rscil";
 const DEFAULT_MODE: &str = "lib";
 const INFER_TYPE: &str = "auto";
 const SELF_HOSTED_PATH: &str = "src/cil.cil";
-const SKIP_AST: bool = true;
 
 // ---------- format errors
 
@@ -575,7 +574,7 @@ struct SStructDef {
 enum NodeType {
     Body,
     LStruct(Vec<(String, Expr)>),
-    LList(String), // TODO we don't even support list declarations yet. Are they anything more than Array("Anything") with closer syntax and semmantics to lip?
+    LList(String), // TODO we don't even support list declarations yet. Are they anything more than Array("Anything") with closer syntax and semmantics to lisp?
     LString(String),
     LI64(i64),
     LBool(bool),
@@ -4178,98 +4177,97 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
 
 // ---------- to ast (aka code_gen lisp-like syntax)
 
-fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
-    let mut ast_str = "".to_string();
-    for se in e.params.iter() {
-        if end_line {
-            ast_str.push_str(&format!("{}\n", to_ast_str(&se)));
-        } else {
-            ast_str.push_str(&format!("{} ", to_ast_str(&se)));
-        }
-    }
-    return ast_str;
-}
+// fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
+//     let mut ast_str = "".to_string();
+//     for se in e.params.iter() {
+//         if end_line {
+//             ast_str.push_str(&format!("{}\n", to_ast_str(&se)));
+//         } else {
+//             ast_str.push_str(&format!("{} ", to_ast_str(&se)));
+//         }
+//     }
+//     return ast_str;
+// }
 
-fn to_ast_str(e: &Expr) -> String {
-    let mut ast_str = "".to_string();
-    match &e.node_type {
-        NodeType::LStruct(lstruct) => {
-            let pairs: Vec<String> = lstruct.iter()
-                .map(|(k, v)| format!("{}: {}", k, to_ast_str(v)))
-                .collect();
-            return format!("{{ {} }}", pairs.join(", "));
-        },
-        NodeType::LBool(lbool) => {
-            return lbool.to_string();
-        },
-        NodeType::LI64(li64) => {
-            return li64.to_string();
-        },
-        NodeType::LString(lstring) => {
-            return lstring.to_string();
-        },
-        NodeType::DefaultCase => {
-            return "default_case".to_string();
-        }
-        NodeType::Body => {
-            return params_to_ast_str(true, &e)
-        },
-        NodeType::Declaration(decl) => {
-            ast_str.push_str(&format!("(def {} {})", decl.name, to_ast_str(&e.get(0))));
-            return ast_str;
-        },
-        NodeType::Assignment(var_name) => {
-            ast_str.push_str(&format!("(set {} {})", var_name, to_ast_str(&e.get(0))));
-            return ast_str;
-        },
-        NodeType::FuncDef(func_def) => {
-            match func_def.function_type {
-                FunctionType::FTFunc => return "(func)".to_string(),
-                FunctionType::FTProc => return "(proc)".to_string(),
-                FunctionType::FTMacro => return "(macro)".to_string(),
-                FunctionType::FTFuncExt => return "(ext_func)".to_string(),
-                FunctionType::FTProcExt => return "(ext_proc)".to_string(),
-            }
-        },
-        NodeType::EnumDef(_) => {
-            return "(enum)".to_string();
-        },
-        NodeType::StructDef(_) => {
-            return "(struct)".to_string();
-        },
-        NodeType::Identifier(id_name) => {
-            return id_name.clone();
-        },
-        NodeType::FCall => {
-            let f_name = get_func_name_in_call(&e);
-            ast_str.push_str(&format!("({} {})", f_name, params_to_ast_str(false, &e)));
-            return ast_str;
-        },
-        NodeType::LList(_) => {
-            ast_str.push_str(&format!("({})", params_to_ast_str(false, &e)));
-            return ast_str;
-        },
-        NodeType::If => {
-            ast_str.push_str(&format!("(if {})", to_ast_str(&e.get(0))));
-            return ast_str;
-        },
-        NodeType::While => {
-            ast_str.push_str(&format!("(while {})", to_ast_str(&e.get(0))));
-            return ast_str;
-        },
-        NodeType::Switch => {
-            ast_str.push_str(&format!("(switch {})", to_ast_str(&e.get(0))));
-            return ast_str;
-        },
-        // TODO why not? this whole function is out of date and untested anyway
-        NodeType::Return => {
-            panic!("{} AST ERROR: Node_type::Return shouldn't be analized in to_ast_str().", LANG_NAME);
-        },
-        NodeType::Throw => {
-            panic!("{} AST ERROR: Node_type::Throw shouldn't be analized in to_ast_str().", LANG_NAME);
-        },
-    }
-}
+// REM reimplement once self hosted
+// fn to_ast_str(_e: &Expr) -> String {
+//     return "".to_string()
+    // let mut ast_str = "".to_string();
+    // match &e.node_type {
+    //     NodeType::LStruct(lstruct) => {
+    //         return lstruct;
+    //     },
+    //     NodeType::LBool(lbool) => {
+    //         return lbool.to_string();
+    //     },
+    //     NodeType::LI64(li64) => {
+    //         return li64.to_string();
+    //     },
+    //     NodeType::LString(lstring) => {
+    //         return lstring.to_string();
+    //     },
+    //     NodeType::DefaultCase => {
+    //         return "default_case".to_string();
+    //     }
+    //     NodeType::Body => {
+    //         return params_to_ast_str(true, &e)
+    //     },
+    //     NodeType::Declaration(decl) => {
+    //         ast_str.push_str(&format!("(def {} {})", decl.name, to_ast_str(&e.get(0))));
+    //         return ast_str;
+    //     },
+    //     NodeType::Assignment(var_name) => {
+    //         ast_str.push_str(&format!("(set {} {})", var_name, to_ast_str(&e.get(0))));
+    //         return ast_str;
+    //     },
+    //     NodeType::FuncDef(func_def) => {
+    //         match func_def.function_type {
+    //             FunctionType::FTFunc => return "(func)".to_string(),
+    //             FunctionType::FTProc => return "(proc)".to_string(),
+    //             FunctionType::FTMacro => return "(macro)".to_string(),
+    //             FunctionType::FTFuncExt => return "(ext_func)".to_string(),
+    //             FunctionType::FTProcExt => return "(ext_proc)".to_string(),
+    //         }
+    //     },
+    //     NodeType::EnumDef(_) => {
+    //         return "(enum)".to_string();
+    //     },
+    //     NodeType::StructDef(_) => {
+    //         return "(struct)".to_string();
+    //     },
+    //     NodeType::Identifier(id_name) => {
+    //         return id_name.clone();
+    //     },
+    //     NodeType::FCall => {
+    //         let f_name = get_func_name_in_call(&e);
+    //         ast_str.push_str(&format!("({} {})", f_name, params_to_ast_str(false, &e)));
+    //         return ast_str;
+    //     },
+    //     NodeType::LList(_) => {
+    //         ast_str.push_str(&format!("({})", params_to_ast_str(false, &e)));
+    //         return ast_str;
+    //     },
+    //     NodeType::If => {
+    //         ast_str.push_str(&format!("(if {})", to_ast_str(&e.get(0))));
+    //         return ast_str;
+    //     },
+    //     NodeType::While => {
+    //         ast_str.push_str(&format!("(while {})", to_ast_str(&e.get(0))));
+    //         return ast_str;
+    //     },
+    //     NodeType::Switch => {
+    //         ast_str.push_str(&format!("(switch {})", to_ast_str(&e.get(0))));
+    //         return ast_str;
+    //     },
+    //     // TODO why not? this whole function is out of date and untested anyway
+    //     NodeType::Return => {
+    //         panic!("{} AST ERROR: Node_type::Return shouldn't be analized in to_ast_str().", LANG_NAME);
+    //     },
+    //     NodeType::Throw => {
+    //         panic!("{} AST ERROR: Node_type::Throw shouldn't be analized in to_ast_str().", LANG_NAME);
+    //     },
+    // }
+// }
 
 // ---------- main binary
 
@@ -4310,9 +4308,9 @@ fn main_run(print_extra: bool, mut context: &mut Context, path: &String, source:
             return format!("{}:{}", &path, error_string);
         },
     };
-    if !SKIP_AST {
-        println!("AST: \n{}", to_ast_str(&e));
-    }
+    // if !SKIP_AST {
+    //     println!("AST: \n{}", to_ast_str(&e));
+    // }
 
     let mut errors = init_context(&mut context, &e);
     if errors.len() > 0 {
