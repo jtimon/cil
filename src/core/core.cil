@@ -125,9 +125,9 @@ and := func(a: Bool, b: Bool) returns Bool {
 // Note that Bool, I64 and String don't have fields because the're the core types
 // think of them as "half-external types" for now
 Bool := struct {
-    size := U8_SIZE
-
     mut data: U8 = 0
+
+    size := U8_SIZE
 
     len := func(self: Bool) returns I64 {
         return 1
@@ -144,20 +144,12 @@ Bool := struct {
         return "false"
     }
 
-    // necessary for branchless arithmetics (but it must be implemented as a cast for it to make sense that way)
     to_i64 := func(self: Bool) returns I64 {
-        if self {
-            return 1
-        }
-        return 0
+        return U8.to_i64(self.data)
     }
 
     to_u8 := func(self: Bool) returns U8 {
-        // TODO move to directly return self.data instead
-        if self {
-            return 1
-        }
-        return 0
+        return self.data
     }
 
     from_i64 := func(i: I64) returns Bool { // TODO support regular struct returns to be able to this as a regular struct internally (except for if/while conditions)
@@ -170,6 +162,7 @@ Bool := struct {
     }
 }
 false := Bool.from_i64(0)
+true := Bool.from_i64(1)
 // true := Bool.from_i64(1) // TODO stop using "true" as literal
 
 lteq := func(a: I64, b: I64) returns Bool {

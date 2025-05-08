@@ -63,8 +63,6 @@ enum TokenType {
     // Reserved words:
     Mut,
 
-    // bool
-    True,
     // type definition
     Struct, Enum,
     // function definition
@@ -153,9 +151,6 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
 
         // declaration/arg modifiers
         "mut" => TokenType::Mut,
-
-        // bool literals
-        "true" => TokenType::True,
 
         // core data types
         "enum" => TokenType::Enum,
@@ -474,7 +469,6 @@ fn is_literal(t: &Token) -> bool {
     return match t.token_type {
         TokenType::String => true,
         TokenType::Number => true,
-        TokenType::True => true,
         _ => false,
     }
 }
@@ -602,7 +596,6 @@ enum NodeType {
     LList(String),
     LString(String),
     LI64(i64),
-    LBool(bool),
     FCall,
     Identifier(String),
     Declaration(Declaration),
@@ -798,7 +791,6 @@ fn parse_literal(t: &Token, current: &mut usize) -> Result<Expr, String> {
     let node_type = match t.token_type {
         TokenType::String => NodeType::LString(t.token_str.clone()),
         TokenType::Number => NodeType::LI64(t.token_str.parse::<i64>().unwrap()),
-        TokenType::True => NodeType::LBool(true),
         _ => {
             return Err(format!("{}:{}: {}  ERROR: Trying to parse a token that's not a literal as a literal, found {:?}.",
                                t.line, t.col, LANG_NAME, t.token_type));
@@ -2379,7 +2371,6 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
 fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
     match &e.node_type {
         NodeType::LI64(_) => Ok(ValueType::TCustom("I64".to_string())),
-        NodeType::LBool(_) => Ok(ValueType::TCustom("Bool".to_string())),
         NodeType::LString(_) => Ok(ValueType::TCustom("String".to_string())),
         NodeType::LList(_) => Ok(ValueType::TList),
         NodeType::FuncDef(func_def) => match func_def.function_type {
@@ -2616,7 +2607,6 @@ fn is_expr_calling_procs(context: &Context, e: &Expr) -> bool {
         NodeType::EnumDef(_) => {
             false
         },
-        NodeType::LBool(_) => false,
         NodeType::LI64(_) => false,
         NodeType::LList(_) => false,
         NodeType::LString(_) => false,
@@ -3246,7 +3236,7 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
             }
         },
 
-        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LBool(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
+        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
     }
 
     return errors
@@ -3499,6 +3489,7 @@ fn lbool_in_string_to_bool(b: &str) -> bool {
 
 fn eval_to_bool(mut context: &mut Context, e: &Expr) -> bool {
     let result = &eval_expr(&mut context, &e);
+    println!("eval_to_bool: result: '{result}'");
     return lbool_in_string_to_bool(result)
 }
 
@@ -4462,7 +4453,18 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                         return context.get_u8(name).unwrap().to_string()
                     },
                     "Bool" => {
-                        return context.get_bool(name).unwrap().to_string()
+                        let bool_result = match context.get_bool(name) {
+                            Some(bool_) => bool_,
+                            _ => {
+                                return e.todo_error("eval", &format!("Can't use identifier '{}' for a bool. Type {:?} not supported yet.",
+                                                                     name, symbol_info.value_type))
+                            },
+                        };
+
+                        if bool_result {
+                            return "true".to_string()
+                        }
+                        return "false".to_string()
                     },
                     "String" => {
                         return context.get_string(name).unwrap().to_string()
@@ -4516,7 +4518,6 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
         NodeType::Body => {
             return eval_body(&mut context, &e.params);
         },
-        NodeType::LBool(bool_value) => bool_value.to_string(),
         NodeType::LI64(li64) => li64.to_string(),
         NodeType::LString(lstring) => lstring.to_string(),
         NodeType::LList(list_str_) => {
@@ -4630,9 +4631,6 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
-        NodeType::LBool(lbool) => {
-            return lbool.to_string();
-        },
         NodeType::LI64(li64) => {
             return li64.to_string();
         },
