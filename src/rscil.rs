@@ -3353,6 +3353,23 @@ fn eval_core_func_memcpy(mut context: &mut Context, e: &Expr) -> String {
     return "".to_string()
 }
 
+fn eval_core_func_read_u8(context: &mut Context, e: &Expr) -> String {
+    assert!(
+        e.params.len() == 2,
+        "{} ERROR: Core func 'read_u8' takes exactly 1 argument. This should never happen.",
+        LANG_NAME
+    );
+
+    let addr_expr = e.get(1);
+    let addr_val = eval_expr(context, addr_expr);
+    let addr: usize = addr_val.parse::<usize>().expect("Expected integer address for read_u8");
+
+    unsafe {
+        let byte = *(addr as *const u8);
+        return format!("{}", byte);
+    }
+}
+
 // ---------- eval str
 
 fn eval_core_func_temp_hack_string2_from_old_string(mut context: &mut Context, e: &Expr) -> String {
@@ -3759,6 +3776,7 @@ fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_
         "free" => eval_core_func_free(&mut context, &e),
         "memset" => eval_core_func_memset(&mut context, &e),
         "memcpy" => eval_core_func_memcpy(&mut context, &e),
+        "read_u8" => eval_core_func_read_u8(&mut context, &e),
         "str_eq" => eval_core_func_str_eq(&mut context, &e),
         "concat" => eval_core_func_concat(&mut context, &e),
         "str_len" => eval_core_func_str_len(&mut context, &e),
