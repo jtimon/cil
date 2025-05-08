@@ -2730,7 +2730,9 @@ fn check_enum_def(e: &Expr, enum_def: &SEnumDef) -> Vec<String> {
                                                                       e.line, e.col, custom_type_name)));
                         },
                     },
-                    _ => {},
+                    _ => {
+                        errors.push(e.todo_error("type", &format!("'enum' does not support non-custom types from now on, found value type '{:?}'", value_type)));
+                    },
                 }
             },
         }
@@ -3652,6 +3654,9 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, mut context: &mut C
                     "String" => {
                         function_context.insert_string(&arg.name, &result);
                     },
+                    "Str" => {
+                        function_context.insert_string(&arg.name, &result);
+                    },
                     _ => {
                         let custom_symbol = function_context.symbols.get(custom_type_name).unwrap();
                         match custom_symbol.value_type {
@@ -3719,6 +3724,10 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, mut context: &mut C
                 let val = function_context.get_string(&arg_name).unwrap();
                 context.insert_string(&source_name, &val);
             },
+            ValueType::TCustom(ref type_name) if type_name == "Str" => {
+                let val = function_context.get_string(&arg_name).unwrap();
+                context.insert_string(&source_name, &val);
+            },
             _ => {
                 // TODO: support struct mutation copying later
             }
@@ -3733,6 +3742,7 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, mut context: &mut C
             // println!("func_def {:?}", func_def);
             // Skip core types like I64, Bool, String, U8
             match custom_type_name.as_str() {
+                // TODO less specials, it's too much pressure
                 "I64" | "U8" | "Bool" | "String" => { /* Do nothing for core types */ },
                 _ => {
 
@@ -3863,7 +3873,7 @@ fn eval_func_proc_call(name: &str, mut context: &mut Context, e: &Expr) -> Strin
             return match id_name.as_str() {
                 "Bool" => "false".to_string(),
                 "U8" | "I64" => "0".to_string(),
-                "String" => "".to_string(),
+                "String" | "Str" => "".to_string(),
                 _ => id_name.to_string(), // TODO Where is the struct being inserted in this case? Is this returned value even used?
             }
         }
@@ -4465,6 +4475,9 @@ fn eval_identifier_expr(name: &str, context: &Context, e: &Expr) -> String {
                         return context.get_bool(name).unwrap().to_string()
                     },
                     "String" => {
+                        return context.get_string(name).unwrap().to_string()
+                    },
+                    "Str" => {
                         return context.get_string(name).unwrap().to_string()
                     },
                     _ => {
