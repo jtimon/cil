@@ -304,6 +304,77 @@ String := struct {
     }
 }
 
+// TODO move to this more self hosted version isntead of String
+Str := struct {
+    mut c_string: I64 = 0  // Pointer to the null-terminated C string
+    mut len: I64 = 0       // Length of the string (number of characters)
+
+    // TODO force the interpreter to call this instead of Str() ala python
+    __init__ := proc() returns Str {
+        mut s := Str()
+        s.c_string = malloc(1)  // Allocate memory for just 1 byte (null terminator)
+        s.len = 0  // Initial length is 0, as it's an empty string
+        memset(s.c_string, U8.from_i64(0), 1)  // Null terminator at the start
+        return s
+    }
+
+    // TODO shouldn't be needed once Str fully replaces String
+    // Constructor from a string literal
+    from_literal := func(literal: String) returns Str {
+        temp_hack_string2_from_old_string: = ext_func(old_string: String) returns Str;
+        return temp_hack_string2_from_old_string(literal)
+    }
+
+    // TODO shouldn't be needed once Str fully replaces String
+    to_string := func(self: Str) returns String {
+        temp_hack_string2_to_old_string: = ext_func(str: Str) returns String;
+        return temp_hack_string2_to_old_string(self)
+    }
+
+    len := func(self: Str) returns I64 {
+        return self.len
+    }
+
+    eq := func(self: Str, other: Str) returns Bool {
+        str_eq := ext_func(a: Str, b: Str) returns Bool;
+        return str_eq(self, other)
+    }
+
+    to_i64 := func(self: Str) returns I64 {
+        return I64.from_str(self)
+    }
+
+    get_substr := func(s: Str, start: I64, end: I64) returns Str {
+        if lt(start, 0) {
+            panic("get_substr: start index cannot be negative")
+        }
+        if lt(end, 0) {
+            panic("get_substr: end index cannot be negative")
+        }
+        if gt(start, end) {
+            panic("get_substr: start index cannot be greater than end index")
+        }
+        if gt(end, s.len()) {
+            panic("get_substr: end index is greater than string length")
+        }
+        if eq(start, end) {
+            panic("get_substr: start and end are the same, no substring")
+        }
+
+        str_get_substr := ext_func(s: Str, start: I64, end: I64) returns Str;
+        return str_get_substr(s, start, end)
+    }
+
+    get_char := func(s: Str, pos: I64) returns Str {
+        return s.get_substr(pos, add(pos, 1))
+    }
+
+    delete := proc(self: Str) {
+        self.len = 0
+        free(self.c_string)
+    }
+}
+
 // TODO rustic interfaces with arrays, for variadic functions at least at first
 # array_Bool_len := ext_func(a: ArrayBool) returns I64;
 # array_Bool_get := ext_func(a: ArrayBool, pos: I64) returns Bool;

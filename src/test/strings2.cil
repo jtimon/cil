@@ -1,0 +1,38 @@
+mode test
+
+// String tests
+test(loc(), Str.eq(Str.from_literal(concat("Hello, ", "world!")), Str.from_literal("Hello, world!")), "concat('Hello, ', 'world!') = 'Hello, world!'")
+test(loc(), I64.eq(I64.from_str("123"), 123), "I64.from_str('123') = 123")
+test(loc(), I64.eq(I64.from_str("0"), 0), "I64.from_str('0') = 0")
+// TODO: Test with invalid strings for I64.from_str, e.g., I64.from_str("abc") // Expected: error or undefined behavior
+test(loc(), Str.eq(I64.to_str(456), Str.from_literal("456")), "I64.to_str(456) = '456'")
+test(loc(), Str.eq(I64.to_str(0), Str.from_literal("0")), "I64.to_str(0) = '0'")
+
+print("this is the same as the next line\n");
+println("this is the same as the next line");
+
+empty_str := Str.from_literal("")
+len3_str := Str.from_literal("012")
+len5_str := Str.from_literal("01234")
+
+test(loc(), I64.eq(empty_str.len(), 0), "Str.len('') = 0")
+test(loc(), I64.eq(len3_str.len(), 3), "Str.len('012') = 3")
+test(loc(), I64.eq(len5_str.len(), 5), "Str.len('01234') = 5")
+
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal("01234"), 0, 1)), "0")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal("01234"), 0, 3)), "012")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal("01234"), 2, 5)), "234")
+
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal(",,\\"), 2, 3)), "\\")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal(",,\""), 2, 3)), "\"")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal(",,\n"), 2, 3)), "\n")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal(",,\t"), 2, 3)), "\t")
+assert_eq_str(loc(), Str.to_string(Str.get_substr(Str.from_literal(",,\r"), 2, 3)), "\r")
+// assert_eq_str(loc(), "\0",  Str.get_substr(Str.from_literal(",,\0"), 2, 3)) // TODO Decide: Do we need to handle string null termination in string literals?
+
+assert_eq_str(loc(), Str.to_string(Str.get_char(Str.from_literal(",,\\"), 2)), "\\")
+assert_eq_str(loc(), Str.to_string(Str.get_char(Str.from_literal(",,\""), 2)), "\"")
+assert_eq_str(loc(), Str.to_string(Str.get_char(Str.from_literal(",,\n"), 2)), "\n")
+assert_eq_str(loc(), Str.to_string(Str.get_char(Str.from_literal(",,\t"), 2)), "\t")
+assert_eq_str(loc(), Str.to_string(Str.get_char(Str.from_literal(",,\r"), 2)), "\r")
+// assert_eq_str(loc(), "\0",  Str.get_char(Str.from_literal(",,\0"), 2))
