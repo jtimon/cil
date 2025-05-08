@@ -308,6 +308,84 @@ String := struct {
     }
 }
 
+ArrayU8 := struct {
+    mut ptr      : I64  = 0     // Pointer to the data buffer
+    mut len      : I64  = 0     // Current number of elements
+    mut cap      : I64  = 0     // Allocated capacity
+    mut is_dyn   : Bool = false // Whether this array is dynamic (can grow)
+
+    INIT_DYN_CAP : I64  = 32
+    MAX_CAP      : I64  = 1024
+
+    new := proc(capacity: I64) returns ArrayU8 {
+        mut arr := ArrayU8()
+        arr.ptr = malloc(capacity)
+        arr.len = capacity
+        arr.cap = capacity
+        arr.is_dyn = false
+        memset(arr.ptr, U8.from_i64(0), arr.cap) // Zeroing by default
+        return arr
+    }
+
+    new_dyn := proc() returns ArrayU8 {
+        mut arr := ArrayU8()
+        arr.ptr = malloc(INIT_DYN_CAP)
+        arr.len = 0
+        arr.cap = INIT_DYN_CAP
+        arr.is_dyn = true
+        memset(arr.ptr, U8.from_i64(0), arr.cap) // Zeroing by default
+        return arr
+    }
+
+    push := proc(mut self: ArrayU8, value: U8) {
+        if not(self.is_dyn) {
+            panic(loc(), "ArrayU8.push: push is not allowed for static arrays")
+        }
+
+        if I64.eq(self.len, self.cap) {
+            new_cap := mul(self.cap, 2)
+            if gt(new_cap, ArrayU8.MAX_CAP) {
+                panic(loc(), "ArrayU8.push: capacity exceeded ArrayU8.MAX_CAP")
+            }
+
+            new_ptr := malloc(new_cap)
+            memcpy(new_ptr, self.ptr, self.len)
+            free(self.ptr)
+            self.ptr = new_ptr
+            self.cap = new_cap
+        }
+
+        mut dest := add(self.ptr, self.len)
+        memcpy(dest, value, 1)
+        self.len = add(self.len, 1)
+    }
+
+    get := func(self: ArrayU8, index: I64) returns U8 {
+        if gteq(index, self.len) {
+            panic(loc(), "ArrayU8.get: index out of bounds")
+        }
+        mut src := add(self.ptr, index)
+        read_u8 := ext_func(addr: I64) returns U8;
+        return read_u8(src)
+    }
+
+    set := proc(mut self: ArrayU8, index: I64, value: U8) {
+        if gteq(index, self.len) {
+            panic(loc(), "ArrayU8.set: index out of bounds")
+        }
+        mut dest := add(self.ptr, index)
+        memcpy(dest, value, 1)
+    }
+
+    delete := proc(mut self: ArrayU8) {
+        free(self.ptr)
+        self.ptr = 0
+        self.len = 0
+        self.cap = 0
+        self.is_dyn = false
+    }
+}
+
 // TODO rustic interfaces with arrays, for variadic functions at least at first
 # array_Bool_len := ext_func(a: ArrayBool) returns I64;
 # array_Bool_get := ext_func(a: ArrayBool, pos: I64) returns Bool;
