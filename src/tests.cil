@@ -20,6 +20,7 @@ println("\nSome basic tests/examples:\n")
 
 // runfile("src/test/strings2.cil") // TODO FIX
 runfile("src/test/arithmetics.cil")
+runfile("src/test/array_u8.cil")
 runfile("src/test/boolean.cil")
 runfile("src/test/branchless.cil")
 runfile("src/test/c_mem.cil")
