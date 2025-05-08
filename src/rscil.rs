@@ -3372,6 +3372,24 @@ fn eval_core_func_read_u8(context: &mut Context, e: &Expr) -> String {
 
 // ---------- eval str
 
+fn eval_core_func_temp_hack_string2_from_old_string(mut context: &mut Context, e: &Expr) -> String {
+    assert!(e.params.len() == 2, "{} ERROR: Core func 'temp_hack_string2_from_old_string' takes exactly 1 argument. This should never happen.", LANG_NAME);
+
+    let new_str_expr = e.get(1);
+    let result = eval_expr(&mut context, new_str_expr);
+    println!("eval_core_func_temp_hack_string2_from_old_string: result: '{result}', new_str_expr: '{:?}'", new_str_expr);
+    return result;
+}
+
+fn eval_core_func_temp_hack_string2_to_old_string(mut context: &mut Context, e: &Expr) -> String {
+    assert!(e.params.len() == 2, "{} ERROR: Core func 'temp_hack_string2_to_old_string' takes exactly 1 argument. This should never happen.", LANG_NAME);
+
+    let old_str_expr = e.get(1);
+    let result = eval_expr(&mut context, old_str_expr);
+    println!("eval_core_func_temp_hack_string2_to_old_string: result: '{result}', old_str_expr: '{:?}'", old_str_expr);
+    return result;
+}
+
 fn eval_core_func_str_eq(mut context: &mut Context, e: &Expr) -> String {
     assert!(e.params.len() == 3, "{} ERROR: Core func 'str_eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
     let a = &eval_expr(&mut context, e.get(1));
@@ -3751,6 +3769,8 @@ fn eval_user_func_proc_call(func_def: &SFuncDef, name: &str, mut context: &mut C
 
 fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_proc: bool) -> String {
     return match name {
+        "temp_hack_string2_from_old_string" => eval_core_func_temp_hack_string2_from_old_string(&mut context, &e),
+        "temp_hack_string2_to_old_string" => eval_core_func_temp_hack_string2_to_old_string(&mut context, &e),
         "loc" => return eval_core_func_loc(&mut context, e),
         "malloc" => eval_core_func_malloc(&mut context, &e),
         "free" => eval_core_func_free(&mut context, &e),
