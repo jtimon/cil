@@ -145,3 +145,61 @@ test_array_dynamic_i64 := proc() {
     assert_eq(loc(), 0, dyn.cap)
 }
 test_array_dynamic_i64()
+
+Vec2 := struct {
+    mut x : I64 = 0
+    mut y : I64 = 0
+
+    new := func(x: I64, y: I64) returns Vec2 {
+        mut v := Vec2()
+        v.x = x
+        v.y = y
+        return v
+    }
+}
+
+test_array_static_vec2 := proc() {
+    mut stat := Array.new("Vec2", 3)
+    assert_eq(loc(), 3, stat.len)
+    assert_eq(loc(), stat.cap, stat.len)
+    test(loc(), not(stat.is_dyn), "Static array should not be dynamic")
+
+    stat.set(0, Vec2.new(1, 2))
+    stat.set(1, Vec2.new(3, 4))
+    stat.set(2, Vec2.new(5, 6))
+
+    mut v := Vec2()
+    stat.get(2, v)
+    test(loc(), I64.eq(v.x, 5), "v.x should be 5")
+    test(loc(), I64.eq(v.y, 6), "v.y should be 6")
+
+    // stat.push(Vec2.new(7, 8)) // Should panic if uncommented
+
+    stat.delete()
+}
+test_array_static_vec2()
+
+test_array_dynamic_vec2 := proc() {
+    mut dyn := Array.new_dyn("Vec2")
+    assert_eq(loc(), 0, dyn.len)
+    // assert_eq(loc(), Array.INIT_DYN_CAP, dyn.cap) // Optional: verify cap
+
+    dyn.push(Vec2.new(10, 20))
+    dyn.push(Vec2.new(30, 40))
+
+    // assert_eq(loc(), 2, dyn.len) // Optional
+    // mut v0 := dyn.get(0)
+    // test(loc(), I64.eq(v0.x, 10), "v0.x should be 10")
+    // test(loc(), I64.eq(v0.y, 20), "v0.y should be 20")
+
+    // dyn.set(0, Vec2.new(50, 60))
+    // mut v1 := dyn.get(0)
+    // test(loc(), I64.eq(v1.x, 50), "v1.x should be 50")
+    // test(loc(), I64.eq(v1.y, 60), "v1.y should be 60")
+
+    dyn.delete()
+    assert_eq(loc(), 0, dyn.ptr)
+    assert_eq(loc(), 0, dyn.len)
+    assert_eq(loc(), 0, dyn.cap)
+}
+test_array_dynamic_vec2()

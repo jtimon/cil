@@ -2087,6 +2087,26 @@ fn eval_core_func_type_as_str(_context: &mut Context, e: &Expr) -> String {
     }
 }
 
+fn eval_core_func_size_from_type_str(context: &mut Context, e: &Expr) -> String {
+    assert!(
+        e.params.len() == 2,
+        "{} ERROR: Core func 'size_from_type_str' takes exactly 1 argument. This should never happen.",
+        LANG_NAME
+    );
+
+    todo!()
+    // let type_str_expr = e.get(1);
+    // match type_str_expr.node_type eval(context) {
+    //     EvalResult::Str(type_name) => {
+    //         match context.get_type_size(&type_name) {
+    //             Ok(size) => format!("{}", size),
+    //             Err(msg) => e.lang_error("eval", &format!("calling core func size_from_type_str: {}", msg)),
+    //         }
+    //     },
+    //     other => e.lang_error("eval", &format!("calling core func size_from_type_str, expected Str, got {:?}", other))
+    // }
+}
+
 fn eval_core_func_lt(mut context: &mut Context, e: &Expr) -> String {
     assert!(e.params.len() == 3, "{} ERROR: Core func 'eq' takes exactly 2 arguments. This should never happen.", LANG_NAME);
     let a = &eval_expr(&mut context, e.get(1)).parse::<i64>().unwrap();
@@ -2473,6 +2493,7 @@ fn eval_core_func_proc_call(name: &str, mut context: &mut Context, e: &Expr, is_
         "loc" => return eval_core_func_loc(&mut context, e),
         "size_of" => eval_core_func_size_of(&mut context, &e),
         "type_as_str" => eval_core_func_type_as_str(&mut context, &e),
+        "size_from_type_str" => eval_core_func_type_as_str(&mut context, &e),
         "to_ptr" => eval_core_func_to_ptr(&mut context, &e),
         "malloc" => eval_core_func_malloc(&mut context, &e),
         "free" => eval_core_func_free(&mut context, &e),
