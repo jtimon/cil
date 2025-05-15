@@ -188,11 +188,21 @@ impl Context {
             Some(symbol_info_) => symbol_info_.is_mut,
             None => return None,
         };
-        let bool_to_insert = match bool_str.parse::<bool>() {
-            Ok(v) => v,
-            Err(_) => return None,
+
+        let stored = match id {
+            // TODO we shouldn't need to do this
+            "false" => 0,
+            "true" => 1,
+            _ => match bool_str.as_str() {
+                "false" => 0,
+                "true" => 1,
+                _ => {
+                    Arena::g().memory.get(*self.arena_index.get(&format!("{}.data", bool_str)).unwrap()).unwrap().clone()
+                },
+            },
         };
-        let stored = if bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
+        // bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
+        println!("insert_bool id '{id}' bool_str '{bool_str}' stored '{stored}'");
 
         let is_field = id.contains('.');
         if is_field {
@@ -1220,7 +1230,6 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
 fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
     match &e.node_type {
         NodeType::LLiteral(Literal::Number(_)) => Ok(ValueType::TCustom("I64".to_string())),
-        NodeType::LLiteral(Literal::Bool(_)) => Ok(ValueType::TCustom("Bool".to_string())),
         NodeType::LLiteral(Literal::Str(_)) => Ok(ValueType::TCustom("Str".to_string())),
         NodeType::LLiteral(Literal::List(_)) => Ok(ValueType::TList),
         NodeType::FuncDef(func_def) => match func_def.function_type {
@@ -4138,7 +4147,6 @@ fn eval_body(mut context: &mut Context, statements: &Vec<Expr>) -> Result<EvalRe
 fn eval_expr(context: &mut Context, e: &Expr) -> Result<EvalResult, String> {
     match &e.node_type {
         NodeType::Body => eval_body(context, &e.params),
-        NodeType::LLiteral(Literal::Bool(bool_value)) => Ok(EvalResult::new(&bool_value.to_string())),
         NodeType::LLiteral(Literal::Number(li64)) => Ok(EvalResult::new(&li64.to_string())),
         NodeType::LLiteral(Literal::Str(lstring)) => Ok(EvalResult::new(lstring)),
         NodeType::LLiteral(Literal::List(list_str_)) => Ok(EvalResult::new(list_str_)),
@@ -4278,9 +4286,6 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
-        NodeType::LLiteral(Literal::Bool(lbool)) => {
-            return lbool.to_string();
-        },
         NodeType::LLiteral(Literal::Number(li64)) => {
             return li64.to_string();
         },

@@ -176,6 +176,7 @@ Bool := struct {
 
     from_i64 := func(i: I64) returns Bool { // TODO support regular struct returns to be able to this as a regular struct internally (except for if/while conditions)
         mut b := Bool()
+        b.data = 0
         if gt(i, 0) {
             b.data = 1
         }
@@ -183,7 +184,7 @@ Bool := struct {
     }
 }
 false := Bool.from_i64(0)
-// true := Bool.from_i64(1) // TODO stop using "true" as literal
+true := Bool.from_i64(1) // TODO stop using "true" as literal
 
 lteq := func(a: I64, b: I64) returns Bool {
     if lt(a, b) {
