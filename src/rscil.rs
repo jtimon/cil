@@ -172,8 +172,21 @@ impl Context {
             Some(symbol_info_) => symbol_info_.is_mut,
             None => return None,
         };
-        let bool_to_insert = lbool_in_string_to_bool(bool_str);
-        let stored = if bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
+
+        let stored = match id {
+            // TODO we shouldn't need to do this
+            "false" => 0,
+            "true" => 1,
+            _ => match bool_str.as_str() {
+                "false" => 0,
+                "true" => 1,
+                _ => {
+                    Arena::g().memory.get(*self.arena_index.get(&format!("{}.data", bool_str)).unwrap()).unwrap().clone()
+                },
+            },
+        };
+        // bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
+        println!("insert_bool id '{id}' bool_str '{bool_str}' stored '{stored}'");
 
         let is_field = id.contains('.');
         if is_field {
@@ -848,7 +861,6 @@ fn get_fcall_value_type(context: &Context, e: &Expr) -> Result<ValueType, String
 fn get_value_type(context: &Context, e: &Expr) -> Result<ValueType, String> {
     match &e.node_type {
         NodeType::LI64(_) => Ok(ValueType::TCustom("I64".to_string())),
-        NodeType::LBool(_) => Ok(ValueType::TCustom("Bool".to_string())),
         NodeType::LString(_) => Ok(ValueType::TCustom("Str".to_string())),
         NodeType::LList(_) => Ok(ValueType::TList),
         NodeType::FuncDef(func_def) => match func_def.function_type {
@@ -1089,7 +1101,6 @@ fn is_expr_calling_procs(context: &Context, e: &Expr) -> bool {
         NodeType::EnumDef(_) => {
             false
         },
-        NodeType::LBool(_) => false,
         NodeType::LI64(_) => false,
         NodeType::LList(_) => false,
         NodeType::LString(_) => false,
@@ -1755,7 +1766,7 @@ fn check_types(mut context: &mut Context, e: &Expr) -> Vec<String> {
             }
         },
 
-        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LBool(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
+        NodeType::LI64(_) | NodeType::LString(_) | NodeType::LList(_) | NodeType::DefaultCase => {},
     }
 
     return errors
@@ -3052,7 +3063,6 @@ fn eval_expr(mut context: &mut Context, e: &Expr) -> String {
         NodeType::Body => {
             return eval_body(&mut context, &e.params);
         },
-        NodeType::LBool(bool_value) => bool_value.to_string(),
         NodeType::LI64(li64) => li64.to_string(),
         NodeType::LString(lstring) => lstring.to_string(),
         NodeType::LList(list_str_) => {
@@ -3166,9 +3176,6 @@ fn params_to_ast_str(end_line: bool, e: &Expr) -> String {
 fn to_ast_str(e: &Expr) -> String {
     let mut ast_str = "".to_string();
     match &e.node_type {
-        NodeType::LBool(lbool) => {
-            return lbool.to_string();
-        },
         NodeType::LI64(li64) => {
             return li64.to_string();
         },

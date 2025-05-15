@@ -91,7 +91,6 @@ pub enum NodeType {
     LList(String),
     LString(String),
     LI64(i64),
-    LBool(bool),
     FCall,
     Identifier(String),
     Declaration(Declaration),
@@ -182,7 +181,6 @@ fn is_literal(t: &Token) -> bool {
     return match t.token_type {
         TokenType::String => true,
         TokenType::Number => true,
-        TokenType::True => true,
         _ => false,
     }
 }
@@ -325,7 +323,6 @@ fn parse_literal(t: &Token, current: &mut usize) -> Result<Expr, String> {
     let node_type = match t.token_type {
         TokenType::String => NodeType::LString(t.token_str.clone()),
         TokenType::Number => NodeType::LI64(t.token_str.parse::<i64>().unwrap()),
-        TokenType::True => NodeType::LBool(true),
         _ => {
             return Err(format!("{}:{}: {}  ERROR: Trying to parse a token that's not a literal as a literal, found {:?}.",
                                t.line, t.col, LANG_NAME, t.token_type));

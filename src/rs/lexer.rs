@@ -23,8 +23,6 @@ pub enum TokenType {
     // Reserved words:
     Mut,
 
-    // bool
-    True,
     // type definition
     Struct, Enum,
     // function definition
@@ -113,9 +111,6 @@ fn scan_reserved_words(identifier: &str) -> TokenType {
 
         // declaration/arg modifiers
         "mut" => TokenType::Mut,
-
-        // bool literals
-        "true" => TokenType::True,
 
         // core data types
         "enum" => TokenType::Enum,
