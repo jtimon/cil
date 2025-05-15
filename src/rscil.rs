@@ -566,58 +566,63 @@ impl Context {
     }
 
     fn insert_string(&mut self, id: &str, value_str: &String) -> Option<String> {
-        // Insert the struct, expect it to define `.c_string` and `.cap`
+        let is_field = id.contains('.');
+
+        // Allocate string data
+        let string_offset = Arena::g().memory.len();
+        Arena::g().memory.extend_from_slice(value_str.as_bytes());
+        Arena::g().memory.push(0); // null terminator
+        let string_offset_bytes = (string_offset as i64).to_ne_bytes();
+        let len_bytes = (value_str.len() as i64).to_ne_bytes();
+
+        if is_field {
+            // Field case: treat the whole `id` as a Str instance (struct inlined)
+            if let Some(&offset) = self.arena_index.get(id) {
+                // Already inserted, just assign
+                Arena::g().memory[offset..offset + 8].copy_from_slice(&string_offset_bytes);
+                Arena::g().memory[offset + 8..offset + 16].copy_from_slice(&len_bytes);
+
+                // Still ensure .c_string and .cap are mapped
+                self.arena_index.insert(format!("{}.c_string", id), offset);
+                self.arena_index.insert(format!("{}.cap", id), offset + 8);
+
+                return Some(value_str.clone());
+            }
+
+            let offset = Arena::g().memory.len();
+            Arena::g().memory.extend_from_slice(&string_offset_bytes);
+            Arena::g().memory.extend_from_slice(&len_bytes);
+            self.arena_index.insert(id.to_string(), offset);
+            self.arena_index.insert(format!("{}.c_string", id), offset);
+            self.arena_index.insert(format!("{}.cap", id), offset + 8);
+            return None;
+        }
+
+        // Not a field: call insert_struct first
         if !self.insert_struct(id, "Str") {
             println!("ERROR: insert_string: Failed to insert struct '{}'", id);
             return None;
         }
 
-        // Look up field offsets
-        let cap_offset = match self.arena_index.get(&format!("{}.cap", id)) {
-            Some(&offset) => offset,
-            None => {
-                println!("ERROR: insert_string: missing arena_index entry for '{}.cap'", id);
-                return None;
-            }
-        };
         let c_string_offset = match self.arena_index.get(&format!("{}.c_string", id)) {
             Some(&offset) => offset,
             None => {
-                println!("ERROR: insert_string: missing arena_index entry for '{}.c_string'", id);
+                println!("ERROR: insert_string: missing '{}.c_string'", id);
                 return None;
             }
         };
-
-        // Allocate and store string bytes at the end of the arena
-        let string_offset = Arena::g().memory.len();
-        Arena::g().memory.extend_from_slice(value_str.as_bytes());
-        Arena::g().memory.push(0); // null terminator
-
-        // Check for overlap
-        let max_struct_field = cap_offset.max(c_string_offset) + 8;
-        if string_offset < max_struct_field {
-            println!(
-                "WARNING: insert_string: string_offset {} overlaps with struct fields ending at {}",
-                string_offset, max_struct_field
-            );
-        }
-
-        // Store string pointer and length
-        let string_offset_bytes = (string_offset as i64).to_ne_bytes();
-        let len_bytes = (value_str.len() as i64).to_ne_bytes();
-
-        if c_string_offset + 8 > Arena::g().memory.len() || cap_offset + 8 > Arena::g().memory.len() {
-            println!(
-                "ERROR: insert_string: field offset out of bounds. Memory size: {}",
-                Arena::g().memory.len()
-            );
-            return None;
-        }
+        let cap_offset = match self.arena_index.get(&format!("{}.cap", id)) {
+            Some(&offset) => offset,
+            None => {
+                println!("ERROR: insert_string: missing '{}.cap'", id);
+                return None;
+            }
+        };
 
         Arena::g().memory[c_string_offset..c_string_offset + 8].copy_from_slice(&string_offset_bytes);
         Arena::g().memory[cap_offset..cap_offset + 8].copy_from_slice(&len_bytes);
 
-        Some(value_str.clone())
+        return Some(value_str.clone());
     }
 
     fn get_enum(self: &Context, id: &str) -> Option<EnumVal> {
@@ -768,7 +773,7 @@ impl Context {
                     for (i, val) in values.iter().enumerate() {
                         let offset = ptr + i * elem_size;
 
-                        let temp_id = format!("{}.{}", name, i);
+                        let temp_id = format!("{}_{}", name, i);
                         self.symbols.insert(temp_id.clone(), SymbolInfo {
                             value_type: ValueType::TCustom("Str".to_string()),
                             is_mut: false,
