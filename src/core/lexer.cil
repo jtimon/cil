@@ -584,3 +584,37 @@ print_lex_errors := proc(tokens: TokenArray, path: Str) returns I64 {
     }
     return errors_found
 }
+
+lexer_from_source := func(path: Str, source: Str) returns Lexer {
+    mut l := Lexer()
+    l.path = path
+    l.tokens = scan_tokens(source)
+
+    if I64.eq(l.tokens.len, 0) {
+        println(path, ":1:0: compiler ERROR: End of file not found.")
+        exit(1)
+    }
+
+    mut first := Token()
+    l.tokens.get(0, first)
+    if Str.eq(TokenType.Eof, first.token_type) {
+        println(path, ":0:0: compiler ERROR: Nothing to be done")
+        exit(1)
+    }
+
+    mut errors := 0
+    mut i := 0
+    while lt(i, l.tokens.len) {
+        mut t := Token()
+        l.tokens.get(i, t)
+        print_if_lex_error(path, t, errors)
+        i.inc()
+    }
+
+    if gt(errors, 0) {
+        println("Compiler errors: ", I64.to_str(errors), " lexical errors found")
+        exit(1)
+    }
+
+    return l
+}
