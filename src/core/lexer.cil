@@ -38,7 +38,7 @@ TokenType := enum {
     // flow control
     If, Else,
     While, For, In,
-    Match, Switch, Default,
+    Match, Switch, Default, Case,
     Return, Throw,
     Try, Catch,
 
@@ -50,10 +50,9 @@ TokenType := enum {
     // Errors (unsupported tokens)
     Const, Var,
     Fn,
-    Case,
     Invalid,
     UnterminatedString,
-    // UnterminatedComment // TODO do nesting comments like jai and odin, shouldn't be that hard.
+    UnterminatedComment,
 }
 
 Token := struct {
