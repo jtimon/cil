@@ -60,6 +60,28 @@ Token := struct {
     // mut token_str: Str = "" // TODO re-enable strings as fields
     mut line: I64 = 0
     mut col: I64 = 0
+
+    lang_error := func(self: Token, msg: Str) returns Str {
+        return Str.concat(
+            I64.to_str(self.line), ":", I64.to_str(self.col), ": ",
+            LANG_NAME, " parse ERROR: ", msg, "\n",
+            "Explanation: This is not your fault as a user, this is a bug in the language.",
+        )
+    }
+
+    todo_error := func(self: Token, msg: Str) returns Str {
+        return Str.concat(
+            I64.to_str(self.line), ":", I64.to_str(self.col), ": ",
+            LANG_NAME, " parse ERROR: ", msg, "\n",
+            "Explanation: Not implemented yet, this is a missing feature in the language.",
+        )
+    }
+
+    error := func(self: Token, msg: Str) returns Str {
+        return Str.concat(
+            I64.to_str(self.line), ":", I64.to_str(self.col), ": parse ERROR: ", msg,
+        )
+    }
 }
 
 TokenArray := struct {
@@ -478,32 +500,71 @@ Lexer := struct {
         return l
     }
 
+    len := func(self: Lexer) returns I64 {
+        self_tokens := self.tokens
+        return self_tokens.len
+    }
+
+    is_eof := func(self: Lexer, offset: I64) returns Bool {
+        self_tokens := self.tokens
+        let i := I64.add(self.current_token, offset)
+        if gteq(i, self_tokens.len) {
+            return true
+        }
+        let t := Token()
+        self_tokens.get(i, t)
+        return TokenType.eq(t.token_type, TokenType.Eof)
+    }
+
+    get_token := func(self: Lexer, index: I64) returns Token {
+        self_tokens := self.tokens
+        let t := Token()
+        self_tokens.get(index, t)
+        return t
+    }
+
     peek := func(self: Lexer) returns Token {
-        return self.arr_current_token
+        return self.get_token(self.current_token)
     }
 
-    consume := func(mut self: Lexer) returns Token {
-        return I64.inc(self.current_token)
-    }
-
-    expect := func(mut self: Lexer, expected: TokenType) returns Bool {
-        p := self.peek()
-        switch p.token_type {
-        case expected:
-            self.current_token = I64.add(self.current_token, 1)
-        case:
-            println(loc(), "Lexer.expect: the current token is not what was expected")
-            return false
+    previous := func(self: Lexer) returns Token {
+        if I64.eq(self.current_token, 0) {
+            println(":: No previous token (at position 0)")
+            exit(1)
         }
-        return true
+        return self.get_token(I64.sub(self.current_token, 1))
     }
 
-    error := proc(self: Lexer, loc_str: Str, t: Token, msg: Str) {
-        println(self.path, ":", t.line, ":", t.col, ": parse ERROR: ", msg)
-        if debug_compiler {
-            println(loc_str, "parse ERROR: ", msg)
+    advance := proc(mut self: Lexer, count: I64) {
+        self_tokens := self.tokens
+        let new_pos := I64.add(self.current_token, count)
+        if gt(new_pos, self_tokens.len) {
+            println(":: Attempt to advance out of bounds")
+            exit(1)
         }
-        exit(1)
+        self.current_token = new_pos
+    }
+
+    go_back := proc(mut self: Lexer, count: I64) {
+        if gt(count, self.current_token) {
+            println(":: Attempt to go back by ", I64.to_str(count), " would underflow from ", I64.to_str(self.current_token))
+            exit(1)
+        }
+        self.current_token = I64.sub(self.current_token, count)
+    }
+
+    peek_ahead := func(self: Lexer, offset: I64) returns Token {
+        self_tokens := self.tokens
+        let i := I64.add(self.current_token, offset)
+        if gteq(i, self_tokens.len) {
+            println(":: Peek ahead by ", I64.to_str(offset), " from ", I64.to_str(self.current_token), " is out of bounds")
+            exit(1)
+        }
+        return self.get_token(i)
+    }
+
+    next := func(self: Lexer) returns Token {
+        return self.peek_ahead(1)
     }
 
 }
@@ -521,7 +582,7 @@ print_if_lex_error := proc(path: Str, t: Token, mut errors_found: I64) {
         print_lex_error(path, t, errors_found, "Invalid character")
 
     case TokenType.UnterminatedString:
-        print_lex_error(path, t, errors_found, "Unterminated String\nSuggestion: add missing '\"'")
+        print_lex_error(path, t, errors_found, "Unterminated Str\nSuggestion: add missing '\"'")
 
     case TokenType.Const:
         print_lex_error(path, t, errors_found, "No need to use 'const', everything is const by default unless 'mut' is used")
@@ -548,7 +609,10 @@ print_if_lex_error := proc(path: Str, t: Token, mut errors_found: I64) {
         print_lex_error(path, t, errors_found, "Operator '/' is not supported yet\nSuggestion: use core func 'div' instead")
 
     case TokenType.EqualEqual:
-        print_lex_error(path, t, errors_found, "Operator '==' is not supported yet\nSuggestion: use 'I64.eq' or 'String.eq' instead")
+        print_lex_error(path, t, errors_found, "Operator '==' is not supported yet\nSuggestion: use 'I64.eq' or 'Str.eq' instead")
+
+    case TokenType.NotEqual:
+        print_lex_error(path, t, errors_found, "Operator '!=' is not supported yet\nSuggestion: use core funcs 'not' and 'I64.eq'/'Str.eq' instead")
 
     case TokenType.Lesser:
         print_lex_error(path, t, errors_found, "Operator '<' is not supported yet\nSuggestion: use core func 'lt' instead")
@@ -564,9 +628,6 @@ print_if_lex_error := proc(path: Str, t: Token, mut errors_found: I64) {
 
     case TokenType.Not:
         print_lex_error(path, t, errors_found, "Operator '!' is not supported yet\nSuggestion: use core func 'not' instead")
-
-    case TokenType.NotEqual:
-        print_lex_error(path, t, errors_found, "Operator '!=' is not supported yet\nSuggestion: use core funcs 'not' and 'I64.eq'/'String.eq' instead")
 
     case:
         // No error, do nothing
