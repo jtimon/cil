@@ -179,16 +179,13 @@
   (setq indent-line-function 'cil-indent-line)
   (setq-local indent-tabs-mode nil)          ; Use spaces, not tabs
   (setq-local tab-width 4)                   ; Set tab width to 4 spaces
-  ;; Enable nested multi-line comments
-  ;; NOTE: While CIL supports nested /* ... */ comments,
-  ;; Emacs syntax highlighting does not. This mode will only highlight up to the first '*/' matching.
   (setq-local comment-start "// ")           ; Default comment prefix for region commenting
   (setq-local comment-start-skip "//+\\s-*") ; Only recognize // for highlighting and commenting
   (setq-local comment-end "")                ; Single-line comments, no end delimiter
-  (setq-local comment-start "// ")
-  (setq-local comment-start-skip "\\(?://+\\|/\\*+\\)\\s-*")
-  (setq-local comment-end "*/")
-  (setq-local comment-multi-line t)
+  (setq-local comment-multi-line nil)        ; Enforce single-line comment style
+  ;; Enable nested multi-line comments
+  ;; NOTE: While CIL supports nested /* ... */ comments,
+  ;; Emacs syntax highlighting does not. This mode will only highlight up to the first '*/' matching.
   (setq-local font-lock-syntactic-face-function
 	      (lambda (state)
 		(cond
