@@ -1272,7 +1272,15 @@ fn is_expr_calling_procs(context: &Context, e: &Expr) -> bool {
             }
             false
         },
-        NodeType::Catch => todo!(),
+        NodeType::Catch => {
+            // The catch body is always the third parameter
+            if let Some(body_expr) = e.params.get(2) {
+                is_expr_calling_procs(context, body_expr)
+            } else {
+                // TODO Err(lang_error) here instead
+                true
+            }
+        }
     }
 }
 
@@ -1710,6 +1718,35 @@ fn check_body_returns_throws(context: &mut Context, e: &Expr, func_def: &SFuncDe
                     }
                 }
             },
+
+            NodeType::Catch => {
+                if p.params.len() != 3 {
+                    errors.push(p.error("type", "Catch must have 3 parameters: variable, type, and body."));
+                } else {
+                    let err_type_expr = &p.params[1];
+                    let catch_body_expr = &p.params[2];
+
+                    // Determine the caught type string
+                    let caught_type = match &err_type_expr.node_type {
+                        NodeType::Identifier(name) => name.clone(),
+                        _ => {
+                            errors.push(err_type_expr.error("type", "Catch type must be a valid identifier"));
+                            return errors;
+                        }
+                    };
+
+                    // Remove first, before descending into body
+                    // println!("[DEBUG] before caught_type {caught_type} thrown_types {:?}", thrown_types);
+                    thrown_types.remove(&caught_type);
+                    // println!("[DEBUG] after caught_type {caught_type} thrown_types {:?}", thrown_types);
+
+                    // Then check body for other thrown exceptions
+                    let mut catch_body_thrown_types = HashSet::new();
+                    errors.extend(check_body_returns_throws(context, e, func_def, &catch_body_expr.params, &mut catch_body_thrown_types, return_found));
+                    thrown_types.extend(catch_body_thrown_types);
+                }
+            },
+
             NodeType::FCall => {
                 match get_func_def_for_fcall(&context, p) {
                     Ok(Some(called_func_def)) => {
@@ -1787,7 +1824,7 @@ fn check_catch_statement(context: &mut Context, e: &Expr) -> Vec<String> {
 
     if e.params.len() != 3 {
         errors.push(e.error("type", "Catch node must have three parameters: variable, type, and body."));
-        return errors;
+        return errors
     }
 
     let err_var_expr = &e.params[0];
@@ -1798,7 +1835,7 @@ fn check_catch_statement(context: &mut Context, e: &Expr) -> Vec<String> {
         NodeType::Identifier(name) => name.clone(),
         _ => {
             errors.push(err_var_expr.error("type", "First catch param must be an identifier"));
-            return errors;
+            return errors
         }
     };
 
@@ -1806,14 +1843,14 @@ fn check_catch_statement(context: &mut Context, e: &Expr) -> Vec<String> {
         NodeType::Identifier(name) => name.clone(),
         _ => {
             errors.push(err_type_expr.error("type", "Second catch param must be a type identifier"));
-            return errors;
+            return errors
         }
     };
 
     // Confirm that the type exists in the context (as done for function args)
     if context.symbols.get(&type_name).is_none() {
         errors.push(e.error("type", &format!("Catch refers to undefined type '{}'", &type_name)));
-        return errors;
+        return errors
     }
 
     // Create scoped context for catch body
@@ -1822,10 +1859,10 @@ fn check_catch_statement(context: &mut Context, e: &Expr) -> Vec<String> {
         value_type: ValueType::TCustom(type_name),
         is_mut: false,
     });
-
+    // TODO properly insert whatever struct in the context, including the arena_index
     errors.extend(check_types(&mut temp_context, body_expr));
 
-    errors
+    return errors
 }
 
 fn check_declaration(mut context: &mut Context, e: &Expr, decl: &Declaration) -> Vec<String> {
