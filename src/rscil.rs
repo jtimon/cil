@@ -188,21 +188,11 @@ impl Context {
             Some(symbol_info_) => symbol_info_.is_mut,
             None => return None,
         };
-
-        let stored = match id {
-            // TODO we shouldn't need to do this
-            "false" => 0,
-            "true" => 1,
-            _ => match bool_str.as_str() {
-                "false" => 0,
-                "true" => 1,
-                _ => {
-                    Arena::g().memory.get(*self.arena_index.get(&format!("{}.data", bool_str)).unwrap()).unwrap().clone()
-                },
-            },
+        let bool_to_insert = match bool_str.parse::<bool>() {
+            Ok(v) => v,
+            Err(_) => return None,
         };
-        // bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
-        println!("insert_bool id '{id}' bool_str '{bool_str}' stored '{stored}'");
+        let stored = if bool_to_insert { 0 } else { 1 }; // TODO why this is backwards?
 
         let is_field = id.contains('.');
         if is_field {
