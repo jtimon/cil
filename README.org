@@ -1,14 +1,14 @@
 
-* Compiled Interpreted Language
+* Translated Interpreted Language
 
 Cil is a general purpose experimental language that is meant to be
-interpreted or compiled to machine code or to some other high level
-language.
+interpreted or translated to machine code or to some other high level
+language. Not to be confused with CIL https://github.com/cil-project/cil
 
 A priority is to have a self hosted implementation as soon as possible,
 although the bootstrap implementation is written in rust.
 
-TODO change name, since it conflicts with https://github.com/cil-project/cil
+TODO s/cil/til everywhere
 
 ** Motivation
 
